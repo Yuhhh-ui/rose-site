@@ -66,7 +66,7 @@ function money(v) {
 
 /* photo frame contents: the image, or a labelled placeholder */
 function photo(url, label) {
-  if (url) return '<div class="fill" style="background-image:url(' + String(url).replace(/["()]/g, '') + ')"></div>';
+  if (url) return '<img class="fill" src="' + esc(url) + '" alt="">';
   return '<div class="ph"><span class="ph-label">' + esc(label || '') + '</span></div>';
 }
 
