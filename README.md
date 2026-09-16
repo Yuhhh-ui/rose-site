@@ -114,7 +114,7 @@ Settings → Connections inside the panel shows what is connected, and
 | `WHATSAPP_PHONE` | Where alerts go: your own number with country code, e.g. `+18695550100`. Shared with CallMeBot. |
 | `NTFY_TOPIC` | Any long, hard-to-guess name, e.g. `rose-studio-a7f3k9qz`. Install the ntfy app, subscribe to that exact name, and alerts arrive as phone notifications. Anyone who knows the name can read the alerts, so keep it long and private. |
 | `NTFY_SERVER` | Optional. Defaults to `https://ntfy.sh`. |
-| `CALLMEBOT_APIKEY` | From CallMeBot: send "I allow callmebot to send me messages" on WhatsApp to +34 644 10 93 63 and it replies with your key. CallMeBot is a free hobby service and is often slow or down. |
+| `CALLMEBOT_APIKEY` | From CallMeBot. Its bot number rotates and is only published at callmebot.com/blog/free-api-whatsapp-messages, so read it there rather than from any number written down here. Save that number as a contact, send it "I allow callmebot to send me messages", and it replies with your key. It is a free hobby project that caps how many people it serves, so the number is sometimes hidden and signups closed. Treat it as a bonus, not the channel you rely on. |
 | `RESEND_API_KEY` | From resend.com → API Keys. |
 | `NOTIFY_EMAIL` | Where alerts go. Without a verified domain, Resend only delivers to the address that owns the Resend account. |
 | `NOTIFY_FROM` | Optional sender, once you have a verified domain in Resend. |
