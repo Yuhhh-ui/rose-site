@@ -87,7 +87,8 @@ Half-filled forms are the only thing kept in the visitor's browser.
 | Content + bookings + reviews + messages | Upstash Redis | Vercel project → Storage → Create → Upstash Redis |
 | Photos | Vercel Blob | Vercel project → Storage → Create → Blob |
 | Studio password | — | Environment variable `STUDIO_PASSWORD` |
-| WhatsApp alerts | Twilio | The four `TWILIO_*` / `WHATSAPP_PHONE` variables below |
+| WhatsApp alerts | Meta WhatsApp Cloud API | Free and official. `META_WA_TOKEN`, `META_WA_PHONE_ID`, `WHATSAPP_PHONE` |
+| WhatsApp alerts | Twilio | Paid past the trial. The four `TWILIO_*` / `WHATSAPP_PHONE` variables below |
 | WhatsApp alerts, free | CallMeBot | `WHATSAPP_PHONE` and `CALLMEBOT_APIKEY` |
 | Phone alerts | ntfy | `NTFY_TOPIC` — no account needed |
 | Email alerts | Resend | `RESEND_API_KEY` and `NOTIFY_EMAIL` |
@@ -108,6 +109,10 @@ Settings → Connections inside the panel shows what is connected, and
 | Name | What it is |
 |---|---|
 | `STUDIO_PASSWORD` | The panel password. Changing it signs everyone out. |
+| `META_WA_TOKEN` | Meta access token. A test token dies after 24 hours; a System User token does not. |
+| `META_WA_PHONE_ID` | The Phone number ID from the WhatsApp → API Setup page. Not the phone number itself. |
+| `META_WA_TEMPLATE` | Name of an approved template, e.g. `new_booking`. Without it, alerts only send inside the 24-hour window. |
+| `META_WA_LANG` | Template language code. Defaults to `en_US`. |
 | `TWILIO_ACCOUNT_SID` | From the Twilio console home page. Starts with `AC`. |
 | `TWILIO_AUTH_TOKEN` | Next to the SID on the same page. |
 | `TWILIO_WHATSAPP_FROM` | The Twilio WhatsApp number. The sandbox one is `+14155238886`. |
@@ -133,6 +138,28 @@ All JSON. "studio" means the session cookie from logging in is required.
 | `/api/upload` | `POST {data}` studio → `{url}` |
 | `/api/reset` | `POST` studio — wipes everything |
 | `/api/notify-test` | `POST` studio — sends a test alert, reports per-channel results |
+
+### Meta WhatsApp Cloud API, in short
+
+Free, official, and it does not expire the way a hobby service does.
+
+1. At developers.facebook.com create an app, type **Business**, and add the
+   **WhatsApp** product.
+2. On WhatsApp → API Setup, copy the **Phone number ID** and add your own
+   number under **To**. A test number only sends to numbers on that list.
+3. Set `META_WA_TOKEN`, `META_WA_PHONE_ID` and `WHATSAPP_PHONE`, redeploy,
+   and use Settings → Send a test alert. The temporary token on that page
+   works for 24 hours, which is enough to prove it end to end.
+4. For alerts that keep working, two things have to be permanent:
+   - **A lasting token.** Business Settings → Users → System users → add one,
+     give it the app, generate a token with `whatsapp_business_messaging`.
+   - **A template.** WhatsApp Manager → Templates → Create, category
+     **Utility**, body `New booking: {{1}}`. Utility templates are usually
+     approved within minutes. Put its name in `META_WA_TEMPLATE`.
+
+Without a template, Meta only accepts a message within 24 hours of you
+messaging the business number, so quiet weeks would silently drop alerts.
+The panel's test button names this error when it happens.
 
 ### Twilio WhatsApp, in short
 

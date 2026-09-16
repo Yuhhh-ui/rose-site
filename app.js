@@ -1175,7 +1175,7 @@ function panelMessages() {
   '</div>';
 }
 
-var LABELS = { whatsapp: 'WhatsApp (Twilio)', callmebot: 'WhatsApp (CallMeBot)', push: 'Push', email: 'Email' };
+var LABELS = { metaWhatsapp: 'WhatsApp (Meta)', whatsapp: 'WhatsApp (Twilio)', callmebot: 'WhatsApp (CallMeBot)', push: 'Push', email: 'Email' };
 
 /* what the server has connected, so it is obvious what still needs setting up in Vercel */
 function connections() {
@@ -1204,7 +1204,8 @@ function connections() {
     '<div class="conn-list">' +
       row(su.storage,  'Storage',  'Add Upstash Redis in the Vercel Storage tab') +
       row(su.photos,   'Photos',   'Add Blob in the Vercel Storage tab') +
-      row(su.whatsapp,  'WhatsApp', 'Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM and WHATSAPP_PHONE') +
+      row(su.metaWhatsapp, 'WhatsApp', 'Free and official: set META_WA_TOKEN, META_WA_PHONE_ID and WHATSAPP_PHONE') +
+      row(su.whatsapp,  'Twilio',   'Paid alternative: the four TWILIO_ and WHATSAPP_PHONE variables') +
       row(su.callmebot, 'CallMeBot', 'Free WhatsApp fallback: WHATSAPP_PHONE and CALLMEBOT_APIKEY') +
       row(su.push,      'Push',      'Set NTFY_TOPIC — phone notifications, no account') +
       row(su.email,     'Email',     'Set RESEND_API_KEY and NOTIFY_EMAIL') +
