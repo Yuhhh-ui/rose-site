@@ -64,6 +64,6 @@ const DEFAULT_CONTENT = {
 
   // in-progress form values, kept so a half-filled form survives a refresh
   form:  { name: '', contact: '', email: '', occasion: '', notes: '', svc: '', date: '', time: '', place: '' },
-  rform: { name: '', service: '', text: '' },
+  rform: { name: '', service: '', text: '', img: '' },
   cform: { name: '', email: '', topic: '', message: '' }
 };

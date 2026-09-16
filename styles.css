@@ -434,23 +434,57 @@ textarea { resize: vertical; line-height: 1.7; }
 .artist-tail .btn { padding: 17px 46px; letter-spacing: .24em; }
 
 /* --- reviews ------------------------------------------------------------ */
-.review-count { margin: 18px 0 0; font-size: 11px; font-weight: 300; letter-spacing: .20em; color: var(--gold); }
-.review-list { max-width: 1000px; margin: 0 auto; padding: 0 var(--gutter); }
-.review { display: flex; flex-direction: column; gap: 12px; padding: 40px 0; border-bottom: 1px solid var(--line); }
-.review-head { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; flex-wrap: wrap; }
-.review-name { font-family: var(--serif); font-size: 22px; }
-.review-meta { font-size: 10px; letter-spacing: .18em; color: var(--gold); }
-.review-text { margin: 0; font-size: 14px; font-weight: 200; line-height: 1.9; color: var(--mute-2); white-space: pre-wrap; }
+.rv-head {
+  display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;
+  padding: clamp(44px, 5.5vw, 84px) var(--gutter) clamp(30px, 4vw, 52px);
+}
+.rv-quote { font-family: var(--script); font-size: clamp(44px, 6.4vw, 86px); line-height: .9; color: var(--gold); max-width: 900px; }
+.rv-quote.empty-hint { font-family: var(--sans); font-size: 14px; }
+.rv-by { font-size: 10px; font-weight: 300; letter-spacing: .24em; color: var(--dim); text-transform: uppercase; }
 
-.review-none { max-width: 620px; margin: 0 auto; padding: 64px var(--gutter); text-align: center; }
-.review-none p { margin: 0; font-size: 14px; font-weight: 200; line-height: 1.9; }
+/* masonry wall of cards */
+.rv-wall { columns: clamp(300px, 40vw, 460px); column-gap: clamp(12px, 1.8vw, 22px); max-width: 1100px; margin: 0 auto; padding: 0 var(--gutter) clamp(40px, 5vw, 72px); }
+.rv-card {
+  break-inside: avoid; margin-bottom: clamp(12px, 1.8vw, 22px);
+  display: flex; flex-direction: column; gap: 12px;
+  padding: clamp(20px, 2.2vw, 28px); background: var(--panel); border: 1px solid var(--line);
+}
+.rv-shot { display: block; width: 100%; height: auto; }
+.rv-text { margin: 0; font-family: var(--serif); font-size: clamp(19px, 2.1vw, 25px); font-weight: 300; line-height: 1.5; text-wrap: pretty; white-space: pre-wrap; }
+.rv-meta { font-size: 9px; font-weight: 300; letter-spacing: .24em; color: var(--dim); text-transform: uppercase; }
 
-.review-form { max-width: 620px; margin: 0 auto; padding: 0 var(--gutter) 88px; display: flex; flex-direction: column; gap: 14px; }
-.review-form h2 { margin: 0; font-family: var(--serif); font-size: 32px; font-weight: 300; }
-.form-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.form-note { font-size: 11px; font-weight: 200; color: var(--dim); }
-.btn-send { cursor: pointer; padding: 14px 30px; background: var(--gold); color: var(--ink); font-size: 10px; font-weight: 500; letter-spacing: .22em; transition: background-color .28s ease; }
-.btn-send:hover { background: var(--cream); }
+/* leave a review */
+.rv-form { margin: 0 var(--gutter) clamp(48px, 6vw, 88px); padding: clamp(32px, 4vw, 52px) clamp(24px, 3.5vw, 48px); background: #CCB9A8; }
+.rv-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: clamp(24px, 3vw, 48px); align-items: start; }
+.rv-form-intro { display: flex; flex-direction: column; gap: 10px; }
+.rv-form-label { font-size: 9px; font-weight: 400; letter-spacing: .34em; color: var(--sand-script); }
+.rv-form-script { font-family: var(--script); font-size: clamp(38px, 4.6vw, 56px); line-height: .85; color: var(--sand-script); }
+.rv-form-intro p { margin: 6px 0 0; max-width: 320px; font-size: 12.5px; font-weight: 300; line-height: 1.8; color: var(--sand-script); }
+.rv-form-fields { display: flex; flex-direction: column; gap: 12px; }
+.rv-field { display: flex; flex-direction: column; gap: 6px; }
+.rv-field span { font-size: 8.5px; font-weight: 400; letter-spacing: .24em; color: var(--sand-script); }
+.rv-field input, .rv-field textarea {
+  background: rgba(243, 235, 225, .5); border: 1px solid rgba(46, 36, 28, .28); color: var(--sand-ink);
+  padding: 12px 14px; font-size: 13px; font-weight: 300;
+}
+.rv-field input { height: 44px; }
+.rv-field textarea { min-height: 84px; }
+.rv-field input:focus, .rv-field textarea:focus { border-color: var(--sand-ink); }
+.rv-attach { display: flex; align-items: center; gap: 12px; }
+.rv-attach img { width: 44px; height: 44px; object-fit: cover; border: 1px solid rgba(46, 36, 28, .28); }
+.rv-attach-name { font-size: 8.5px; font-weight: 400; letter-spacing: .24em; color: var(--sand-script); }
+.rv-attach-remove { cursor: pointer; font-size: 8.5px; letter-spacing: .2em; color: var(--sand-dim); text-decoration: underline; }
+.rv-form-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 2px; }
+.rv-upload {
+  cursor: pointer; padding: 13px 24px; border: 1px dashed rgba(46, 36, 28, .5); color: var(--sand-ink);
+  font-size: 9px; font-weight: 400; letter-spacing: .22em; transition: border-color .28s ease;
+}
+.rv-upload:hover { border-color: var(--sand-ink); }
+.rv-upload input { display: none; }
+.rv-send { padding: 14px 30px; font-size: 9.5px; font-weight: 500; letter-spacing: .24em; }
+.rv-note { font-size: 11px; font-weight: 300; line-height: 1.7; color: var(--sand-script); }
+.ok-dark  { color: #2F5A34; }
+.err-dark { color: #7A2E2E; }
 
 /* --- booking ------------------------------------------------------------ */
 .step { padding: 56px var(--gutter); border-bottom: 1px solid var(--line); }
@@ -624,6 +658,8 @@ textarea { resize: vertical; line-height: 1.7; }
 .a-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .a-toggle-label { font-size: 11px; font-weight: 200; color: var(--dim); }
 .a-toggle { cursor: pointer; font-size: 9.5px; letter-spacing: .16em; color: var(--gold); }
+
+.r-shot { display: block; align-self: flex-start; max-height: 220px; width: auto; max-width: 100%; border: 1px solid var(--line); }
 
 .look-admin { display: flex; flex-direction: column; gap: 10px; padding: 16px 0; border-top: 1px solid var(--line); }
 

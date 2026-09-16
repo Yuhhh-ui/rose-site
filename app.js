@@ -461,42 +461,67 @@ function artistPage() {
   '</div>';
 }
 
+/* the review quoted at the top of the reviews page: featured first, but it must have words */
+function quotedReview() {
+  var rs = state.data.reviews.filter(function (r) { return r.published && r.text; });
+  return rs.filter(function (r) { return r.featured; })[0] || rs[0] || null;
+}
+
 function reviewsPage() {
-  var d = state.data;
+  var d = state.data, f = d.rform;
   var pub = d.reviews.filter(function (r) { return r.published; });
+  var quote = quotedReview();
+  var first = (d.artist.name || 'Rosé').split(' ')[0];
 
-  var list = pub.length
-    ? '<div class="review-list">' + pub.map(function (r) {
-        return '<article class="review">' +
-          '<div class="review-head">' +
-            '<span class="review-name">' + esc(r.name) + '</span>' +
-            '<span class="review-meta">' + esc(r.service ? r.service.toUpperCase() : 'ROSÉ CLIENT') + '</span>' +
+  var cards = pub.map(function (r) {
+    var meta = r.service ? r.service : (r.img && !r.text ? 'Sent in' : 'Client');
+    return '<article class="rv-card">' +
+      (r.img ? '<img class="rv-shot" src="' + esc(r.img) + '" alt="Review from ' + esc(r.name) + '">' : '') +
+      (r.text ? '<p class="rv-text">' + esc(r.text) + '</p>' : '') +
+      '<span class="rv-meta">' + esc(r.name) + ' · ' + esc(meta) + '</span>' +
+    '</article>';
+  }).join('');
+
+  return '<div class="page reviews">' +
+    '<section class="rv-head">' +
+      '<span class="eyebrow">' +
+        (pub.length ? pub.length + (pub.length === 1 ? ' REVIEW' : ' REVIEWS') + ' · ALL FROM REAL CLIENTS' : 'NO REVIEWS YET · BE THE FIRST') +
+      '</span>' +
+      (quote
+        ? '<span class="rv-quote">' + esc(quote.text) + '</span><span class="rv-by">— ' + esc(quote.name) + '</span>'
+        : '<span class="rv-quote empty-hint">Kind words from clients will appear here.</span>') +
+    '</section>' +
+
+    (pub.length ? '<div class="rv-wall">' + cards + '</div>' : '') +
+
+    '<section class="rv-form sand">' +
+      '<div class="rv-form-grid">' +
+        '<div class="rv-form-intro">' +
+          '<span class="rv-form-label">BEEN IN THE CHAIR?</span>' +
+          '<span class="rv-form-script">Leave a review</span>' +
+          '<p>A screenshot of your message is a fine review.</p>' +
+        '</div>' +
+        '<div class="rv-form-fields">' +
+          '<label class="rv-field"><span>YOUR NAME</span>' +
+            '<input type="text" value="' + esc(f.name) + '" data-k="rform.name"></label>' +
+          '<label class="rv-field"><span>IN YOUR WORDS (OPTIONAL)</span>' +
+            '<textarea rows="3" data-k="rform.text">' + esc(f.text) + '</textarea></label>' +
+          (f.img
+            ? '<div class="rv-attach"><img src="' + esc(f.img) + '" alt=""><span class="rv-attach-name">ATTACHED</span>' +
+              '<span class="rv-attach-remove" data-act="clearImg:rform.img">REMOVE</span></div>'
+            : '') +
+          '<div class="rv-form-actions">' +
+            '<label class="rv-upload">＋ ' + (f.img ? 'CHANGE THE PICTURE' : 'ADD A SCREENSHOT OR PHOTO') +
+              '<input type="file" accept="image/*" data-upload="rform.img"></label>' +
+            '<span class="btn-dark rv-send" data-act="sendReview">SEND IT IN</span>' +
           '</div>' +
-          '<p class="review-text">' + esc(r.text) + '</p>' +
-        '</article>';
-      }).join('') + '</div>'
-    : '<div class="review-none"><p class="empty-hint">No reviews published yet. ' +
-      'If you have been in the chair, leave the first one.</p></div>';
-
-  return '<div class="page">' +
-    '<div class="page-head">' +
-      '<p class="eyebrow">REVIEWS</p>' +
-      '<h1>Kind words</h1>' +
-      '<p class="review-count">' +
-        (pub.length ? pub.length + (pub.length === 1 ? ' REVIEW' : ' REVIEWS') : 'NO REVIEWS YET') +
-      '</p>' +
-    '</div>' +
-    list +
-    '<section class="review-form">' +
-      '<h2>Leave a review</h2>' +
-      '<input type="text" value="' + esc(d.rform.name) + '" data-k="rform.name" placeholder="Your name">' +
-      '<input type="text" value="' + esc(d.rform.service) + '" data-k="rform.service" placeholder="Which service?">' +
-      '<textarea rows="4" data-k="rform.text" placeholder="How was it?">' + esc(d.rform.text) + '</textarea>' +
-      '<div class="form-foot">' +
-        '<span class="form-note">Rosé approves reviews before they appear.</span>' +
-        '<span class="btn-send" data-act="sendReview">SEND REVIEW</span>' +
+          (state.flash === 'review-sent'
+            ? '<span class="rv-note ok-dark">Thank you — sent to ' + esc(first) + ' for approval.</span>'
+            : state.flash === 'review-error'
+              ? '<span class="rv-note err-dark">Add your name and either a few words or a picture.</span>'
+              : '<span class="rv-note">Nothing appears until ' + esc(first) + ' approves it.</span>') +
+        '</div>' +
       '</div>' +
-      (state.flash === 'review-sent' ? '<p class="ok">Thank you — sent to Rosé for approval.</p>' : '') +
     '</section>' +
   '</div>';
 }
@@ -935,15 +960,16 @@ function panelReviews() {
   var cards = rs.map(function (r, i) {
     return '<div class="r-card">' +
       '<div class="r-head">' +
-        '<span class="r-who">' + esc(r.name) + ' · ' + esc(r.service || '—') + '</span>' +
+        '<span class="r-who">' + esc(r.name) + (r.service ? ' · ' + esc(r.service) : '') + '</span>' +
         '<span class="r-state">' +
-          (r.published ? (r.featured ? 'Published · featured on homepage' : 'Published') : 'Waiting for you') +
+          (r.published ? (r.featured ? 'Published · featured at the top of the reviews and artist pages' : 'Published') : 'Waiting for you') +
         '</span>' +
       '</div>' +
-      '<p class="r-text">' + esc(r.text) + '</p>' +
+      (r.img ? '<img class="r-shot" src="' + esc(r.img) + '" alt="">' : '') +
+      (r.text ? '<p class="r-text">' + esc(r.text) + '</p>' : '') +
       '<div class="r-actions">' +
         (!r.published ? '<span class="tag tag-gold tag-lg" data-act="rPublish:' + i + '">APPROVE</span>' : '') +
-        '<span class="tag tag-plain tag-lg" data-act="rFeature:' + i + '">FEATURE ON HOMEPAGE</span>' +
+        (r.text ? '<span class="tag tag-plain tag-lg" data-act="rFeature:' + i + '">FEATURE AT THE TOP</span>' : '') +
         '<span class="tag tag-plain tag-lg" data-act="rUnpublish:' + i + '">HIDE</span>' +
         '<span class="tag tag-bad tag-lg" data-act="rRemove:' + i + '">DELETE</span>' +
       '</div>' +
@@ -953,7 +979,7 @@ function panelReviews() {
   return '<div class="main-body">' +
     (rs.length
       ? '<div class="stack-wide">' + cards + '</div>'
-      : empty('No reviews yet', 'Reviews left on the reviews page arrive here. Nothing shows on the site until you approve it.')) +
+      : empty('No reviews yet', 'Reviews and screenshots sent in from the reviews page arrive here. Nothing shows on the site until you approve it.')) +
   '</div>';
 }
 
@@ -1084,12 +1110,12 @@ var actions = {
 
   sendReview: function () {
     var r = state.data.rform;
-    if (!r.name || !r.text) return;
+    if (!r.name || (!r.text && !r.img)) { flash('review-error'); return; }
     state.data.reviews.unshift({
-      id: 'r' + Date.now(), name: r.name, service: r.service, text: r.text,
+      id: 'r' + Date.now(), name: r.name, service: r.service || '', text: r.text || '', img: r.img || '',
       published: false, featured: false
     });
-    state.data.rform = { name: '', service: '', text: '' };
+    state.data.rform = { name: '', service: '', text: '', img: '' };
     save();
     flash('review-sent');
   },
@@ -1201,7 +1227,7 @@ function handleUpload(input) {
   if (!file || !path) return;
 
   var icon = path.indexOf('home.quickIcons.') === 0;
-  var png  = file.type === 'image/png';
+  var png  = file.type === 'image/png' && /^home\.(quickIcons|heroImg|ctaImg)/.test(path);
 
   var reader = new FileReader();
   reader.onload = function () {
@@ -1210,7 +1236,7 @@ function handleUpload(input) {
       else setPath(path, url);
       save();
       render();
-    }, icon ? 320 : 1200, png);
+    }, icon ? 320 : path === 'rform.img' ? 900 : 1200, png);
   };
   reader.readAsDataURL(file);
 }
