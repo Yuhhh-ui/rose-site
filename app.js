@@ -137,6 +137,9 @@ function featuredReview() {
    ========================================================================= */
 
 function nav() {
+  function link(page, label) {
+    return '<span class="nav-link' + (state.page === page ? ' active' : '') + '" data-act="go:' + page + '">' + label + '</span>';
+  }
   return '' +
   '<header class="nav">' +
     '<div class="brand" data-act="go:home">' +
@@ -144,11 +147,11 @@ function nav() {
       '<span class="brand-sub">CREATIVE ARTISTRY</span>' +
     '</div>' +
     '<nav class="nav-links">' +
-      '<span class="nav-link" data-act="go:home">HOME</span>' +
-      '<span class="nav-link" data-act="go:services">SERVICES</span>' +
-      '<span class="nav-link" data-act="go:artist">THE ARTIST</span>' +
-      '<span class="nav-link" data-act="go:reviews">REVIEWS</span>' +
-      '<span class="nav-link" data-act="go:contact">CONTACT</span>' +
+      link('home', 'HOME') +
+      link('services', 'SERVICES') +
+      link('artist', 'THE ARTIST') +
+      link('reviews', 'REVIEWS') +
+      link('contact', 'CONTACT') +
       '<span class="nav-book" data-act="go:booking">BOOK</span>' +
     '</nav>' +
   '</header>';
@@ -300,49 +303,82 @@ function homePage() {
 }
 
 function servicesPage() {
-  var d = state.data;
+  var d = state.data, live = liveServices();
 
-  var rows = liveServices().map(function (x) {
+  var summary = live.map(function (x) {
+    return '<div class="sv-sum">' +
+      '<span class="sv-sum-name">' + esc(x.s.name) + '</span>' +
+      '<span class="sv-sum-price">' + esc(x.s.price ? money(x.s.price) : 'On request') + '</span>' +
+    '</div>';
+  }).join('');
+
+  var cards = live.map(function (x) {
     var s = x.s;
-    return '<section class="svc-row">' +
-      '<div class="svc-row-img frame">' + photo(s.img, 'PHOTO') + '</div>' +
-      '<div class="svc-row-body">' +
-        '<span class="svc-num">0' + (x.i + 1) + '</span>' +
-        '<h2 class="svc-name">' + esc(s.name) + '</h2>' +
-        (s.desc
-          ? '<p class="svc-desc">' + esc(s.desc) + '</p>'
-          : '<p class="svc-desc empty-hint">Description to be added.</p>') +
-        '<div class="svc-meta">' +
-          '<span class="svc-price">' + esc(money(s.price)) + '</span>' +
-          '<span class="svc-dur">' + esc(s.dur) + '</span>' +
-          '<span class="btn-sm" data-act="book:' + x.i + '">BOOK</span>' +
+    return '<article class="sv-card" data-act="book:' + x.i + '">' +
+      '<div class="sv-photo frame">' +
+        photo(s.img, 'PHOTO — ' + s.name.toUpperCase()) +
+        '<span class="sv-num">0' + (x.i + 1) + '</span>' +
+      '</div>' +
+      '<div class="sv-body">' +
+        '<h2 class="sv-name">' + esc(s.name) + '</h2>' +
+        (s.desc ? '<p class="sv-desc">' + esc(s.desc) + '</p>' : '') +
+        '<div class="sv-meta">' +
+          '<span class="sv-dur">' + esc(s.dur) + '</span>' +
+          '<span class="sv-price">' + esc(s.price ? money(s.price) : 'On request') + '</span>' +
         '</div>' +
       '</div>' +
-    '</section>';
+      '<span class="sv-book">BOOK THIS →</span>' +
+    '</article>';
   }).join('');
 
   var lashes = d.lashes.map(function (l) {
     return '<div class="lash-card">' +
       '<div class="lash-img frame">' + photo(l.img, 'LASH PHOTO') + '</div>' +
       '<span class="lash-name">' + esc(l.name) + '</span>' +
-      '<span class="lash-price">' + esc(money(l.price)) + '</span>' +
+      '<span class="lash-price">' + esc(l.price ? money(l.price) : 'On request') + '</span>' +
     '</div>';
   }).join('');
 
-  return '<div class="page">' +
-    '<div class="page-head">' +
-      '<p class="eyebrow">SERVICES</p>' +
-      '<h1>The Menu</h1>' +
+  return '<div class="page services">' +
+    '<div class="sv-head">' +
+      '<div class="sv-head-copy">' +
+        '<span class="eyebrow">SERVICES</span>' +
+        '<span class="sv-script">Choose your</span>' +
+        '<h1 class="sv-title">Look</h1>' +
+      '</div>' +
+      '<div class="sv-scroll" aria-hidden="true">' +
+        '<span>SCROLL</span>' +
+        '<svg width="44" height="8" viewBox="0 0 44 8" fill="none" stroke="#C9A47C" stroke-width="1"><path d="M0 4h42M37 1l5 3-5 3"/></svg>' +
+      '</div>' +
     '</div>' +
-    rows +
-    '<section class="lashes">' +
-      '<p class="eyebrow">LASHES</p>' +
-      '<h3>Lashes, applied with any look.</h3>' +
+
+    '<div class="sv-summary">' + summary + '</div>' +
+
+    '<div class="strip sv-strip">' + cards + '</div>' +
+
+    '<section class="addons">' +
+      '<div class="addons-head">' +
+        '<span class="eyebrow">ADD-ONS</span>' +
+        '<h3>Lashes, with any look.</h3>' +
+      '</div>' +
       '<div class="lash-grid">' + lashes + '</div>' +
     '</section>' +
-    (d.policies
-      ? '<section class="policies" id="policies"><p class="eyebrow">GOOD TO KNOW</p><p>' + esc(d.policies) + '</p></section>'
-      : '') +
+
+    '<section class="policy-band" data-act="go:services#policies">' +
+      '<div class="policy-band-copy">' +
+        '<span class="policy-band-label">BEFORE YOU BOOK</span>' +
+        '<h3>Deposits, timing, travel and touch-ups.</h3>' +
+      '</div>' +
+      '<span class="policy-band-link">READ THE POLICIES →</span>' +
+    '</section>' +
+
+    '<section class="policies" id="policies">' +
+      '<p class="eyebrow">GOOD TO KNOW</p>' +
+      (d.policies
+        ? '<p>' + esc(d.policies) + '</p>'
+        : '<p class="empty-hint">Your policies will appear here — add them in the studio panel under Website content.</p>') +
+    '</section>' +
+
     '<div class="tail-cta"><span class="btn" data-act="go:booking">BOOK A SERVICE</span></div>' +
   '</div>';
 }

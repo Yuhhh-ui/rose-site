@@ -157,7 +157,7 @@ textarea { resize: vertical; line-height: 1.7; }
   cursor: pointer; font-size: 10.5px; font-weight: 300; letter-spacing: .24em;
   color: var(--mute); transition: color .28s ease;
 }
-.nav-link:hover { color: var(--cream); }
+.nav-link:hover, .nav-link.active { color: var(--cream); }
 .nav-book {
   cursor: pointer; padding: 11px 22px; border: 1px solid var(--gold);
   color: var(--gold); font-size: 10px; font-weight: 400; letter-spacing: .22em;
@@ -304,30 +304,78 @@ textarea { resize: vertical; line-height: 1.7; }
 .gallery-cta { display: flex; justify-content: center; margin-top: clamp(26px, 3.5vw, 40px); }
 
 /* --- services page ------------------------------------------------------ */
-.svc-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); border-bottom: 1px solid var(--line); }
-.svc-row-img  { min-height: 380px; }
-.svc-row-body { display: flex; flex-direction: column; justify-content: center; gap: 16px; padding: 56px 48px; }
-.svc-num  { font-size: 9.5px; font-weight: 300; letter-spacing: .30em; color: var(--gold); }
-.svc-name { margin: 0; font-family: var(--serif); font-size: 38px; font-weight: 300; line-height: 1.1; }
-.svc-desc { margin: 0; font-size: 13.5px; font-weight: 200; line-height: 1.85; color: var(--mute-2); white-space: pre-wrap; }
-.svc-meta { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; margin-top: 6px; }
-.svc-price { font-family: var(--serif); font-size: 26px; font-weight: 400; color: var(--gold); }
-.svc-dur   { font-size: 10px; font-weight: 300; letter-spacing: .20em; color: var(--dim); }
+.sv-head {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+  padding: clamp(34px, 4.5vw, 64px) var(--gutter) clamp(20px, 2.5vw, 32px);
+}
+.sv-head-copy { display: flex; flex-direction: column; gap: 6px; }
+.sv-head-copy .eyebrow { font-size: 9px; }
+.sv-script { font-family: var(--script); font-size: clamp(34px, 4vw, 50px); line-height: .8; color: var(--gold); }
+.sv-title { margin: 0; font-family: var(--serif); font-size: clamp(44px, 7vw, 92px); line-height: .9; font-weight: 500; letter-spacing: .005em; text-transform: uppercase; }
+.sv-scroll { display: flex; align-items: center; gap: 12px; }
+.sv-scroll span { font-size: 9px; font-weight: 300; letter-spacing: .28em; color: var(--dim); }
 
-.lashes { padding: 76px var(--gutter); background: var(--panel); border-bottom: 1px solid var(--line); }
-.lashes h3 { margin: 0; font-family: var(--serif); font-size: 34px; font-weight: 300; }
-.lashes .eyebrow { margin-bottom: 14px; }
-.lash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr)); gap: 16px; margin-top: 34px; }
-.lash-card { display: flex; flex-direction: column; gap: 12px; padding-bottom: 22px; border: 1px solid var(--line-2); }
-.lash-img   { height: 190px; }
-.lash-name  { font-family: var(--serif); font-size: 22px; padding: 8px 22px 0; }
-.lash-price { font-size: 11px; font-weight: 300; letter-spacing: .14em; color: var(--gold); padding: 0 22px; }
+.sv-summary {
+  display: flex; flex-wrap: wrap; gap: clamp(14px, 2.4vw, 34px); align-items: baseline;
+  margin: 0 var(--gutter) clamp(18px, 2.2vw, 28px); padding-top: clamp(14px, 1.8vw, 22px);
+  border-top: 1px solid var(--line-2);
+}
+.sv-sum { display: flex; align-items: baseline; gap: 8px; }
+.sv-sum-name  { font-size: 9px; font-weight: 400; letter-spacing: .22em; color: var(--dim); text-transform: uppercase; }
+.sv-sum-price { font-family: var(--serif); font-size: 15px; color: var(--gold); white-space: nowrap; }
 
-.policies { padding: 76px var(--gutter); max-width: 820px; margin: 0 auto; }
+/* horizontal strip of service cards */
+.strip { scrollbar-width: thin; scrollbar-color: var(--gold) var(--frame); }
+.strip::-webkit-scrollbar { height: 3px; }
+.strip::-webkit-scrollbar-track { background: var(--frame); }
+.strip::-webkit-scrollbar-thumb { background: var(--gold); }
+.sv-strip {
+  display: flex; gap: clamp(10px, 1.4vw, 18px); overflow-x: auto;
+  padding: 0 var(--gutter) clamp(28px, 3.5vw, 44px); scroll-snap-type: x mandatory; scroll-padding-inline: var(--gutter);
+}
+.sv-card { flex: 0 0 clamp(250px, 27vw, 360px); scroll-snap-align: start; display: flex; flex-direction: column; gap: 16px; cursor: pointer; }
+.sv-photo { aspect-ratio: 2 / 3; }
+.sv-photo .ph-label { letter-spacing: .26em; }
+.sv-num { position: absolute; top: 14px; left: 14px; font-size: 9px; font-weight: 400; letter-spacing: .24em; color: var(--gold); }
+.sv-body { display: flex; flex-direction: column; gap: 9px; padding-bottom: 16px; border-bottom: 1px solid rgba(243, 235, 225, .14); }
+.sv-name { margin: 0; font-family: var(--serif); font-size: clamp(26px, 2.8vw, 34px); line-height: 1; font-weight: 400; }
+.sv-desc { margin: 0; font-size: 12.5px; font-weight: 200; line-height: 1.75; color: var(--mute-2); white-space: pre-wrap; }
+.sv-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.sv-dur   { font-size: 9.5px; font-weight: 300; letter-spacing: .22em; color: var(--dim); text-transform: uppercase; }
+.sv-price { font-family: var(--serif); font-size: 19px; color: var(--gold); }
+.sv-book { font-size: 9.5px; font-weight: 400; letter-spacing: .24em; color: var(--gold); transition: color .28s ease; }
+.sv-card:hover .sv-book { color: var(--cream); }
+
+/* add-ons */
+.addons { padding: clamp(40px, 5vw, 72px) var(--gutter); }
+.addons-head { display: flex; flex-direction: column; gap: 10px; margin-bottom: clamp(22px, 3vw, 34px); }
+.addons-head .eyebrow { font-size: 9px; }
+.addons-head h3 { margin: 0; font-family: var(--serif); font-size: clamp(26px, 3.4vw, 38px); font-weight: 300; line-height: 1.1; }
+.lash-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(10px, 1.6vw, 18px); }
+.lash-card { display: flex; flex-direction: column; gap: 11px; }
+.lash-img   { aspect-ratio: 1; }
+.lash-img .ph-label { font-size: 8px; }
+.lash-name  { font-size: 12px; font-weight: 300; }
+.lash-price { font-size: 9.5px; font-weight: 300; letter-spacing: .20em; color: var(--gold); text-transform: uppercase; }
+
+/* before you book */
+.policy-band {
+  cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+  margin: 0 var(--gutter); padding: clamp(30px, 3.6vw, 48px) clamp(22px, 3vw, 44px);
+  background: #CCB9A8; transition: background-color .28s ease;
+}
+.policy-band:hover { background: #C0AB98; }
+.policy-band-copy { display: flex; flex-direction: column; gap: 12px; }
+.policy-band-label { font-size: 9px; font-weight: 400; letter-spacing: .34em; color: var(--sand-dim); }
+.policy-band h3 { margin: 0; font-family: var(--serif); font-size: clamp(22px, 2.8vw, 30px); font-weight: 400; line-height: 1.15; color: var(--sand-ink); }
+.policy-band-link { font-size: 10px; font-weight: 400; letter-spacing: .22em; color: var(--sand-ink); white-space: nowrap; }
+
+.policies { padding: clamp(40px, 5vw, 64px) var(--gutter) 0; max-width: 820px; margin: 0 auto; }
 .policies .eyebrow { margin-bottom: 22px; }
 .policies p { margin: 0; font-size: 14px; font-weight: 200; line-height: 1.95; color: var(--mute-2); white-space: pre-wrap; }
 
-.tail-cta { padding: 56px var(--gutter) 88px; text-align: center; }
+.tail-cta { display: flex; justify-content: center; padding: clamp(44px, 5.5vw, 76px) var(--gutter); }
+.tail-cta .btn { padding: 17px 46px; letter-spacing: .24em; }
 
 /* --- artist ------------------------------------------------------------- */
 .artist-hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); border-bottom: 1px solid var(--line); }
@@ -641,8 +689,8 @@ textarea { resize: vertical; line-height: 1.7; }
   .svc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 16px; }
   .gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .footer-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; }
   .page-head h1, .artist-name { font-size: 40px; }
-  .svc-row-body { padding: 40px 24px; }
   .artist-body, .login-form { padding: 44px 24px; }
   .side { width: 100%; border-right: 0; border-bottom: 1px solid var(--line); }
   .side-nav { flex-direction: row; flex-wrap: wrap; }
