@@ -36,7 +36,8 @@ var state = {
   setup: null,         // what the server has connected (storage, photos, whatsapp, email)
   loginError: '',      // shown on the login page
   saveNote: '',        // "Saving…" / "Saved" in the panel header
-  storageError: ''     // set when the server has no storage connected yet
+  storageError: '',    // set when the server has no storage connected yet
+  notifyTest: null     // result of Settings → Send a test alert
 };
 
 /* --- storage ------------------------------------------------------------ */
@@ -1147,6 +1148,8 @@ function panelMessages() {
   '</div>';
 }
 
+var LABELS = { push: 'Push', whatsapp: 'WhatsApp', email: 'Email' };
+
 /* what the server has connected, so it is obvious what still needs setting up in Vercel */
 function connections() {
   var su = state.setup || {};
@@ -1155,13 +1158,31 @@ function connections() {
       '<span class="conn-label">' + label + '</span>' +
       '<span class="conn-hint">' + (ok ? 'Connected' : hint) + '</span></div>';
   }
+  var t = state.notifyTest;
+  var results = '';
+  if (t === 'sending') {
+    results = '<p class="form-note" style="margin-top:12px">Sending…</p>';
+  } else if (t && t.none) {
+    results = '<p class="err" style="margin-top:12px">No alerts are set up yet. Add one of the above, then redeploy.</p>';
+  } else if (t && t.error) {
+    results = '<p class="err" style="margin-top:12px">' + esc(t.error) + '</p>';
+  } else if (t && t.results) {
+    results = '<div class="test-results">' + t.results.map(function (r) {
+      return '<p class="' + (r.ok ? 'ok' : 'err') + '">' + esc(LABELS[r.channel] || r.channel) + ': ' +
+        (r.ok ? 'sent — check your phone' : esc(r.error)) + '</p>';
+    }).join('') + '</div>';
+  }
+
   return '<p class="eyebrow" style="margin-top:36px">CONNECTIONS</p>' +
     '<div class="conn-list">' +
       row(su.storage,  'Storage',  'Add Upstash Redis in the Vercel Storage tab') +
       row(su.photos,   'Photos',   'Add Blob in the Vercel Storage tab') +
+      row(su.push,     'Push',     'Set NTFY_TOPIC — the simplest way to get alerts') +
       row(su.whatsapp, 'WhatsApp', 'Set WHATSAPP_PHONE and CALLMEBOT_APIKEY') +
       row(su.email,    'Email',    'Set RESEND_API_KEY and NOTIFY_EMAIL') +
-    '</div>';
+    '</div>' +
+    '<span class="btn-sm" style="margin-top:16px" data-act="testAlert">SEND A TEST ALERT</span>' +
+    results;
 }
 
 function panelSettings() {
@@ -1356,6 +1377,14 @@ var actions = {
   },
 
   /* panel — settings */
+  testAlert: function () {
+    state.notifyTest = 'sending';
+    render();
+    API.post('/api/notify-test')
+      .then(function (r) { state.notifyTest = r; render(); })
+      .catch(function (e) { state.notifyTest = { error: e.message }; render(); });
+  },
+
   resetAll: function () {
     if (!window.confirm('Clear everything and start fresh? Bookings, reviews, messages, photos and all copy will be wiped.')) return;
     var wipe = function () { state.data = blank(); state.section = 'bookings'; render(); };

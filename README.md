@@ -87,21 +87,25 @@ Half-filled forms are the only thing kept in the visitor's browser.
 | Content + bookings + reviews + messages | Upstash Redis | Vercel project → Storage → Create → Upstash Redis |
 | Photos | Vercel Blob | Vercel project → Storage → Create → Blob |
 | Studio password | — | Environment variable `STUDIO_PASSWORD` |
+| Phone alerts | ntfy | `NTFY_TOPIC` — no account needed |
 | WhatsApp alerts | CallMeBot | `WHATSAPP_PHONE` and `CALLMEBOT_APIKEY` |
 | Email alerts | Resend | `RESEND_API_KEY` and `NOTIFY_EMAIL` |
 
 The two storage add-ons set their own environment variables. After adding
 any of these, redeploy (Actions → Deploy to Vercel → Run workflow).
 
-Settings → Connections inside the panel shows what is connected.
+Settings → Connections inside the panel shows what is connected, and
+**Send a test alert** sends a real one and reports exactly what failed.
 
 ### Environment variables
 
 | Name | What it is |
 |---|---|
 | `STUDIO_PASSWORD` | The panel password. Changing it signs everyone out. |
+| `NTFY_TOPIC` | Any long, hard-to-guess name, e.g. `rose-studio-a7f3k9qz`. Install the ntfy app, subscribe to that exact name, and alerts arrive as phone notifications. Anyone who knows the name can read the alerts, so keep it long and private. |
+| `NTFY_SERVER` | Optional. Defaults to `https://ntfy.sh`. |
 | `WHATSAPP_PHONE` | Your number with country code, e.g. `+18695550100`. |
-| `CALLMEBOT_APIKEY` | From CallMeBot: send "I allow callmebot to send me messages" on WhatsApp to +34 644 10 93 63 and it replies with your key. |
+| `CALLMEBOT_APIKEY` | From CallMeBot: send "I allow callmebot to send me messages" on WhatsApp to +34 644 10 93 63 and it replies with your key. CallMeBot is a free hobby service and is often slow or down. |
 | `RESEND_API_KEY` | From resend.com → API Keys. |
 | `NOTIFY_EMAIL` | Where alerts go. Without a verified domain, Resend only delivers to the address that owns the Resend account. |
 | `NOTIFY_FROM` | Optional sender, once you have a verified domain in Resend. |
@@ -119,6 +123,7 @@ All JSON. "studio" means the session cookie from logging in is required.
 | `/api/messages` | `POST` · `GET` studio · `DELETE {id}` studio |
 | `/api/upload` | `POST {data}` studio → `{url}` |
 | `/api/reset` | `POST` studio — wipes everything |
+| `/api/notify-test` | `POST` studio — sends a test alert, reports per-channel results |
 
 ## Not built yet
 
