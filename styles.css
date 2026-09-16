@@ -378,25 +378,60 @@ textarea { resize: vertical; line-height: 1.7; }
 .tail-cta .btn { padding: 17px 46px; letter-spacing: .24em; }
 
 /* --- artist ------------------------------------------------------------- */
-.artist-hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); border-bottom: 1px solid var(--line); }
-.artist-portrait { min-height: 560px; }
-.artist-body { display: flex; flex-direction: column; justify-content: center; gap: 20px; padding: 64px 52px; }
-.artist-label { font-size: 9.5px; font-weight: 300; letter-spacing: .34em; color: var(--dim); }
-.artist-name { margin: 0; font-family: var(--serif); font-size: 60px; font-weight: 300; line-height: .98; }
-.artist-body .script { font-size: 32px; }
-.artist-story { margin: 0; font-size: 14px; font-weight: 200; line-height: 1.95; color: var(--mute-2); white-space: pre-wrap; }
+.artist-hero {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: clamp(28px, 4vw, 64px); align-items: center;
+  padding: clamp(44px, 5.5vw, 88px) var(--gutter);
+}
+.artist-hero-copy { display: flex; flex-direction: column; gap: 14px; max-width: 560px; }
+.artist-script { font-family: var(--script); font-size: clamp(52px, 7vw, 92px); line-height: .82; color: var(--gold); }
+.artist-name { margin: 6px 0 0; font-family: var(--serif); font-size: clamp(38px, 5.2vw, 72px); line-height: .94; font-weight: 400; text-transform: uppercase; letter-spacing: .015em; text-wrap: pretty; }
+.artist-hero-copy .band-rule { margin: 8px 0 2px; background: rgba(201, 164, 124, .55); }
+.artist-tagline { font-size: 10px; font-weight: 300; letter-spacing: .34em; color: var(--dim); text-transform: uppercase; }
+.artist-figure { display: flex; justify-content: center; }
+.artist-frame { width: 100%; max-width: clamp(280px, 34vw, 440px); aspect-ratio: 3 / 4.4; background: var(--frame); border: 1px solid rgba(201, 164, 124, .34); padding: 10px; }
+.artist-portrait { position: relative; width: 100%; height: 100%; background: #241E18; }
+.artist-portrait .ph-label { font-size: 9px; letter-spacing: .26em; }
 
-.approach { padding: 88px var(--gutter); text-align: center; background: var(--panel); border-bottom: 1px solid var(--line); }
-.approach .eyebrow { margin-bottom: 20px; }
-.approach p { margin: 0 auto; max-width: 700px; font-size: 15px; font-weight: 200; line-height: 1.95; color: var(--mute); white-space: pre-wrap; }
+.story {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: clamp(24px, 4vw, 56px); align-items: center;
+  padding: clamp(44px, 5.5vw, 84px) var(--gutter);
+}
+.story-img { aspect-ratio: 4 / 5; background: #241E18; }
+.story-copy { display: flex; flex-direction: column; gap: 16px; max-width: 520px; }
+.story-text { margin: 0; font-size: 14.5px; font-weight: 200; line-height: 2; color: var(--mute); font-style: italic; text-wrap: pretty; white-space: pre-wrap; }
+.story-quote { font-family: var(--script); font-size: clamp(30px, 3.8vw, 46px); line-height: 1; color: var(--gold); }
+.story-quote.empty-hint { color: var(--faint); font-style: normal; }
 
-.work { padding: 76px var(--gutter); }
-.work .eyebrow { margin-bottom: 26px; }
+.looks { padding: clamp(44px, 5.5vw, 80px) var(--gutter); background: var(--panel); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.looks-head { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: clamp(22px, 3vw, 36px); }
+.looks-head h2 { margin: 0; font-family: var(--serif); font-size: clamp(28px, 3.8vw, 46px); line-height: 1; font-weight: 400; }
+.looks-head .eyebrow { font-size: 9px; letter-spacing: .34em; }
+.looks-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(10px, 1.6vw, 18px); }
+.look { display: flex; flex-direction: column; gap: 12px; }
+.look-img { aspect-ratio: 3 / 4; }
+.look-img .ph-label { font-size: 8px; }
+.look-num  { font-size: 9px; font-weight: 400; letter-spacing: .24em; color: var(--gold); }
+.look-name { font-family: var(--serif); font-size: clamp(18px, 2vw, 24px); line-height: 1.1; }
+.look-note { font-size: 11.5px; font-weight: 200; line-height: 1.7; color: var(--dim); font-style: italic; }
+
+.kind { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: clamp(48px, 6vw, 88px) var(--gutter); text-align: center; }
+.kind .script { font-size: clamp(34px, 4.2vw, 50px); }
+.kind-quote { margin: 0; max-width: 680px; font-family: var(--serif); font-size: clamp(20px, 2.6vw, 32px); font-weight: 300; line-height: 1.5; text-wrap: pretty; }
+.kind-by { font-size: 10px; font-weight: 300; letter-spacing: .24em; color: var(--dim); }
+.kind .link-gold { margin-top: 8px; transition: color .28s ease; }
+.kind .link-gold:hover { color: var(--cream); }
+
+.work { padding: 0 var(--gutter) clamp(48px, 6vw, 88px); }
+.work-head { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 26px; }
+.work-head h2 { margin: 0; font-family: var(--serif); font-size: clamp(28px, 3.8vw, 46px); line-height: 1; font-weight: 400; }
 .work-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
-.work-tile { height: 280px; }
+.work-tile { aspect-ratio: 3 / 4; }
 
-.artist-tail { padding: 0 var(--gutter) 88px; text-align: center; }
-.artist-tail h2 { margin: 0 0 22px; font-family: var(--serif); font-size: 40px; font-weight: 300; }
+.artist-tail { display: flex; flex-direction: column; align-items: center; gap: 26px; padding: clamp(48px, 6vw, 88px) var(--gutter); text-align: center; }
+.artist-tail h2 { margin: 0; font-family: var(--serif); font-size: clamp(30px, 4.4vw, 54px); line-height: 1.1; font-weight: 300; }
+.artist-tail .btn { padding: 17px 46px; letter-spacing: .24em; }
 
 /* --- reviews ------------------------------------------------------------ */
 .review-count { margin: 18px 0 0; font-size: 11px; font-weight: 300; letter-spacing: .20em; color: var(--gold); }
@@ -590,6 +625,8 @@ textarea { resize: vertical; line-height: 1.7; }
 .a-toggle-label { font-size: 11px; font-weight: 200; color: var(--dim); }
 .a-toggle { cursor: pointer; font-size: 9.5px; letter-spacing: .16em; color: var(--gold); }
 
+.look-admin { display: flex; flex-direction: column; gap: 10px; padding: 16px 0; border-top: 1px solid var(--line); }
+
 .icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 16px 10px; }
 .icon-cell { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
 .icon-cell .quick-icon { width: 64px; height: 64px; }
@@ -690,8 +727,9 @@ textarea { resize: vertical; line-height: 1.7; }
   .gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .footer-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; }
-  .page-head h1, .artist-name { font-size: 40px; }
-  .artist-body, .login-form { padding: 44px 24px; }
+  .looks-grid { grid-template-columns: 1fr; gap: 28px; }
+  .page-head h1 { font-size: 40px; }
+  .login-form { padding: 44px 24px; }
   .side { width: 100%; border-right: 0; border-bottom: 1px solid var(--line); }
   .side-nav { flex-direction: row; flex-wrap: wrap; }
   .field-row { grid-template-columns: 1fr; gap: 6px; }

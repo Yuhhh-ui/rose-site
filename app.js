@@ -384,37 +384,79 @@ function servicesPage() {
 }
 
 function artistPage() {
-  var d = state.data;
+  var d = state.data, a = d.artist, feat = featuredReview();
+  var first = (a.name || 'Rosé').split(' ')[0].toUpperCase();
+
+  var looks = (a.looks || []).map(function (l, i) {
+    return '<div class="look">' +
+      '<div class="look-img frame">' + photo(l.img, 'PHOTO') + '</div>' +
+      '<span class="look-num">0' + (i + 1) + '</span>' +
+      '<span class="look-name">' + esc(l.name || 'Look name') + '</span>' +
+      '<span class="look-note' + (l.note ? '' : ' empty-hint') + '">' + esc(l.note || 'One line about it.') + '</span>' +
+    '</div>';
+  }).join('');
 
   var work = '';
   if (d.gallery.length) {
     work = '<section class="work" id="work">' +
-      '<p class="eyebrow">SELECTED WORK</p>' +
+      '<div class="work-head">' +
+        '<h2>Selected work</h2>' +
+        '<span class="eyebrow">' + d.gallery.length + (d.gallery.length === 1 ? ' PHOTO' : ' PHOTOS') + '</span>' +
+      '</div>' +
       '<div class="work-grid">' +
         d.gallery.map(function (u) { return '<div class="work-tile frame">' + photo(u, '') + '</div>'; }).join('') +
       '</div>' +
     '</section>';
   }
 
-  return '<div class="page">' +
+  return '<div class="page artist">' +
+
     '<section class="artist-hero">' +
-      '<div class="artist-portrait frame">' + photo(d.artist.portrait, 'PORTRAIT') + '</div>' +
-      '<div class="artist-body">' +
-        '<span class="artist-label">MEET YOUR ARTIST</span>' +
-        '<h1 class="artist-name">Rosé</h1>' +
-        '<span class="script">Your trusted makeup artist</span>' +
-        (d.artist.story
-          ? '<p class="artist-story">' + esc(d.artist.story) + '</p>'
-          : '<p class="artist-story empty-hint">Your story will appear here — add it in the studio panel.</p>') +
+      '<div class="artist-hero-copy">' +
+        '<span class="artist-script">Meet your artist</span>' +
+        '<h1 class="artist-name">' + esc(a.name || 'Rosé') + '</h1>' +
+        '<div class="band-rule"></div>' +
+        '<span class="artist-tagline">' + esc(a.tagline || 'Your trusted makeup artist · St Kitts') + '</span>' +
+      '</div>' +
+      '<div class="artist-figure">' +
+        '<div class="artist-frame">' +
+          '<div class="artist-portrait">' + photo(a.portrait, 'PORTRAIT') + '</div>' +
+        '</div>' +
       '</div>' +
     '</section>' +
-    (d.artist.approach
-      ? '<section class="approach"><p class="eyebrow">HOW I WORK</p><p>' + esc(d.artist.approach) + '</p></section>'
-      : '') +
+
+    '<section class="story">' +
+      '<div class="story-img frame">' + photo(a.storyImg, 'PHOTO') + '</div>' +
+      '<div class="story-copy">' +
+        '<span class="eyebrow">HER STORY</span>' +
+        (a.story
+          ? '<p class="story-text">' + esc(a.story) + '</p>'
+          : '<p class="story-text empty-hint">A short paragraph goes here — three or four sentences is plenty. Add it in the studio panel.</p>') +
+        '<span class="story-quote' + (a.quote ? '' : ' empty-hint') + '">' + esc(a.quote || 'A line in her own words goes here.') + '</span>' +
+      '</div>' +
+    '</section>' +
+
+    '<section class="looks">' +
+      '<div class="looks-head">' +
+        '<h2>Her three favourite looks</h2>' +
+        '<span class="eyebrow">CHOSEN BY ' + esc(first) + '</span>' +
+      '</div>' +
+      '<div class="looks-grid">' + looks + '</div>' +
+    '</section>' +
+
+    '<section class="kind">' +
+      '<span class="script">Kind words</span>' +
+      (feat
+        ? '<p class="kind-quote">' + esc(feat.text) + '</p><span class="kind-by">— ' + esc(feat.name.toUpperCase()) + '</span>'
+        : '<p class="kind-quote empty-hint">A client\'s review appears here once one is published from the studio panel.</p><span class="kind-by">— CLIENT NAME</span>') +
+      '<span class="link-gold" data-act="go:reviews">ALL REVIEWS →</span>' +
+    '</section>' +
+
     work +
+
     '<section class="artist-tail">' +
       '<h2>I would love to do your makeup.</h2>' +
-      '<span class="btn" data-act="go:booking">BOOK WITH ROSÉ</span>' +
+      '<span class="btn" data-act="go:booking">BOOK WITH ' + esc(first) + '</span>' +
     '</section>' +
   '</div>';
 }
@@ -844,15 +886,41 @@ function panelPages() {
       '</div>' +
       '<div class="pages-col">' +
         '<p class="eyebrow">THE ARTIST</p>' +
-        '<div class="field"><span class="field-label">Portrait</span>' +
+        '<div class="field"><span class="field-label">Your name (shown large at the top of the page)</span>' +
+          '<input type="text" value="' + esc(d.artist.name) + '" data-k="artist.name" placeholder="Arianna Franks"></div>' +
+        '<div class="field"><span class="field-label">Tagline under your name</span>' +
+          '<input type="text" value="' + esc(d.artist.tagline) + '" data-k="artist.tagline" placeholder="Your trusted makeup artist · St Kitts"></div>' +
+        '<div class="field"><span class="field-label">Portrait (tall photo, top of the page)</span>' +
           '<div class="a-img-md frame">' + photo(d.artist.portrait, 'NO PHOTO') + '</div>' +
-          '<label class="upload">UPLOAD<input type="file" accept="image/*" data-upload="artist.portrait"></label></div>' +
+          '<div class="upload-row">' +
+            '<label class="upload">UPLOAD<input type="file" accept="image/*" data-upload="artist.portrait"></label>' +
+            (d.artist.portrait ? '<span class="remove-link" data-act="clearImg:artist.portrait">REMOVE</span>' : '') +
+          '</div></div>' +
         '<div class="field"><span class="field-label">One line about you (shown on the homepage)</span>' +
           '<input type="text" value="' + esc(d.artist.intro) + '" data-k="artist.intro" placeholder="Bridal, event and editorial makeup in St Kitts"></div>' +
-        '<div class="field"><span class="field-label">Your story</span>' +
-          '<textarea rows="7" data-k="artist.story" placeholder="Tell them who you are">' + esc(d.artist.story) + '</textarea></div>' +
-        '<div class="field"><span class="field-label">How you work</span>' +
-          '<textarea rows="4" data-k="artist.approach">' + esc(d.artist.approach) + '</textarea></div>' +
+        '<div class="field"><span class="field-label">Her story — three or four sentences</span>' +
+          '<textarea rows="6" data-k="artist.story" placeholder="Tell them who you are">' + esc(d.artist.story) + '</textarea></div>' +
+        '<div class="field"><span class="field-label">A line in your own words (shown in script under the story)</span>' +
+          '<input type="text" value="' + esc(d.artist.quote) + '" data-k="artist.quote" placeholder="Beauty should feel like you."></div>' +
+        '<div class="field"><span class="field-label">Story photo (beside the story)</span>' +
+          '<div class="a-img-md frame">' + photo(d.artist.storyImg, 'NO PHOTO') + '</div>' +
+          '<div class="upload-row">' +
+            '<label class="upload">UPLOAD<input type="file" accept="image/*" data-upload="artist.storyImg"></label>' +
+            (d.artist.storyImg ? '<span class="remove-link" data-act="clearImg:artist.storyImg">REMOVE</span>' : '') +
+          '</div></div>' +
+        '<p class="eyebrow" style="margin-top:12px">HER THREE FAVOURITE LOOKS</p>' +
+        (d.artist.looks || []).map(function (l, i) {
+          return '<div class="look-admin">' +
+            '<span class="look-num">0' + (i + 1) + '</span>' +
+            '<div class="a-img-sm frame">' + photo(l.img, 'NO PHOTO') + '</div>' +
+            '<input type="text" value="' + esc(l.name) + '" data-k="artist.looks.' + i + '.name" placeholder="Look name">' +
+            '<input type="text" value="' + esc(l.note) + '" data-k="artist.looks.' + i + '.note" placeholder="One line about it">' +
+            '<div class="upload-row">' +
+              '<label class="upload">UPLOAD<input type="file" accept="image/*" data-upload="artist.looks.' + i + '.img"></label>' +
+              (l.img ? '<span class="remove-link" data-act="clearImg:artist.looks.' + i + '.img">REMOVE</span>' : '') +
+            '</div>' +
+          '</div>';
+        }).join('') +
         '<p class="eyebrow" style="margin-top:12px">SERVICES PAGE — GOOD TO KNOW</p>' +
         '<textarea rows="5" data-k="policies" ' +
           'placeholder="Deposits, cancellations, travel, how to prep">' + esc(d.policies) + '</textarea>' +

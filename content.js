@@ -21,7 +21,20 @@ const DEFAULT_CONTENT = {
     quickIcons: ['', '', '', '', '', '']  // optional pictures for the six quick-link circles
   },
 
-  artist: { intro: '', story: '', approach: '', portrait: '' },
+  artist: {
+    name: 'Arianna Franks',
+    tagline: 'Your trusted makeup artist · St Kitts',
+    intro: '',            // one line on the homepage
+    story: '',            // "Her story" paragraph
+    quote: '',            // script line in her own words
+    portrait: '',         // tall portrait at the top of the page
+    storyImg: '',         // photo beside the story
+    looks: [              // "Her three favourite looks"
+      { name: '', note: '', img: '' },
+      { name: '', note: '', img: '' },
+      { name: '', note: '', img: '' }
+    ]
+  },
 
   services: [
     { name: 'Bridal',        dur: '90 min',  price: '', desc: '', img: '', live: true },
