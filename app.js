@@ -6,7 +6,8 @@
    ------------
    state          current page + all saved content
    render()       rebuilds #app from state, called after every change
-   localStorage   everything the studio panel edits is saved under KEY
+   api/           on Vercel, content and the inbox live on the server (see client.js);
+                  opened from disk, everything is kept in this browser instead
 
    Adding a page:  write a xxxPage() function, then add it to render().
    Adding a panel section:  add it to SECTIONS and write a section function.
@@ -31,30 +32,127 @@ var state = {
   logged: false,       // signed into the studio panel
   section: 'bookings', // which panel section is open
   data: null,          // all site content — see content.js
-  flash: ''            // transient confirmation message
+  flash: '',           // transient confirmation message
+  setup: null,         // what the server has connected (storage, photos, whatsapp, email)
+  loginError: '',      // shown on the login page
+  saveNote: '',        // "Saving…" / "Saved" in the panel header
+  storageError: ''     // set when the server has no storage connected yet
 };
 
 /* --- storage ------------------------------------------------------------ */
 
+/* Two modes, chosen in client.js:
+   API.remote  content and the inbox live on the server; only half-filled
+               forms are kept in this browser.
+   local       everything lives in this browser under KEY (opening index.html
+               straight from disk, or a server without an API).            */
+
+var KEY = 'rose-studio-v1';
+var FORMS_KEY = 'rose-forms-v1';
+var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'gallery', 'hours', 'brand'];
+var FORM_KEYS = ['form', 'rform', 'cform'];
+
 function blank() { return JSON.parse(JSON.stringify(DEFAULT_CONTENT)); }
 
-function load() {
-  state.data = blank();
+/* lay saved values over the defaults, one level deep for the nested objects */
+function applySaved(saved) {
+  if (!saved) return;
+  state.data = Object.assign(state.data, saved);
+  ['home', 'artist', 'brand'].forEach(function (k) {
+    if (saved[k]) state.data[k] = Object.assign(blank()[k], saved[k]);
+  });
+}
+
+function loadLocal() {
   try {
     var raw = localStorage.getItem(KEY);
-    if (raw) {
-      var saved = JSON.parse(raw);
-      state.data = Object.assign(blank(), saved);
-      /* nested objects are merged too, so fields added later still get their defaults */
-      ['home', 'artist', 'brand'].forEach(function (k) {
-        if (saved[k]) state.data[k] = Object.assign(blank()[k], saved[k]);
-      });
-    }
+    if (raw) applySaved(JSON.parse(raw));
   } catch (e) { /* private browsing, corrupt data — start blank */ }
 }
 
+function restoreForms() {
+  try {
+    var raw = localStorage.getItem(FORMS_KEY);
+    if (raw) applySaved(JSON.parse(raw));
+  } catch (e) {}
+}
+
+function pick(keys) {
+  var out = {};
+  keys.forEach(function (k) { out[k] = state.data[k]; });
+  return out;
+}
+
+/* the forms only: kept in this browser so a half-filled form survives a refresh */
+function saveForms() {
+  try { localStorage.setItem(API.remote ? FORMS_KEY : KEY, JSON.stringify(API.remote ? pick(FORM_KEYS) : state.data)); } catch (e) {}
+}
+
+/* the site content changed: push it to the server (a moment after typing stops), or keep it here */
+var pushTimer = null;
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(state.data)); } catch (e) {}
+  if (!API.remote) { saveForms(); return; }
+  if (!state.logged) return;
+  clearTimeout(pushTimer);
+  setSaveNote('Saving…');
+  pushTimer = setTimeout(pushContent, 700);
+}
+
+function pushContent() {
+  API.put('/api/content', { content: pick(CONTENT_KEYS) })
+    .then(function () { setSaveNote('Saved'); })
+    .catch(function (e) { setSaveNote('Not saved — ' + e.message); });
+}
+
+/* update the note in the panel header without re-rendering, so typing is not interrupted */
+function setSaveNote(text) {
+  state.saveNote = text;
+  var el = document.querySelector('.main-note');
+  if (el) el.textContent = text;
+}
+
+/* bookings, reviews and messages for the panel */
+function loadInbox() {
+  return Promise.all([API.get('/api/bookings'), API.get('/api/reviews'), API.get('/api/messages')])
+    .then(function (r) {
+      state.data.bookings = r[0].items;
+      state.data.reviews  = r[1].items;
+      state.data.messages = r[2].items;
+      render();
+    })
+    .catch(function (e) { flash('inbox-error:' + e.message); });
+}
+
+/* first load */
+function boot() {
+  state.data = blank();
+  if (!API.remote) { loadLocal(); render(); return; }
+  restoreForms();
+  API.get('/api/session')
+    .then(function (ses) {
+      state.logged = !!ses.logged;
+      state.setup = ses.setup || null;
+      state.loginConfigured = ses.configured;
+      return API.get('/api/content')
+        .then(function (c) {
+          applySaved(c.content);
+          if (!state.logged) state.data.reviews = c.reviews || [];
+        })
+        .catch(function (e) {
+          /* the server is there but storage is not connected yet: show the defaults and say so in the panel */
+          state.storageError = e.message;
+        })
+        .then(function () {
+          render();
+          if (state.logged) loadInbox();
+        });
+    })
+    .catch(function () {
+      /* no API behind this server (a plain static host) — behave like a local copy */
+      API.remote = false;
+      loadLocal();
+      render();
+    });
 }
 
 /* --- small helpers ------------------------------------------------------ */
@@ -85,7 +183,7 @@ function setPath(path, val) {
   var ks = path.split('.'), o = state.data;
   for (var i = 0; i < ks.length - 1; i++) o = o[ks[i]];
   o[ks[ks.length - 1]] = val;
-  save();
+  if (FORM_KEYS.indexOf(ks[0]) >= 0) saveForms(); else save();
 }
 
 function monthMeta() {
@@ -99,9 +197,15 @@ function monthMeta() {
 function flash(msg) {
   state.flash = msg;
   render();
+  if (msg === 'sending' || msg === 'signing-in') return;
   setTimeout(function () {
     if (state.flash === msg) { state.flash = ''; render(); }
-  }, 2600);
+  }, msg.indexOf('error') >= 0 ? 6000 : 2600);
+}
+
+/* the text behind a flash like "send-error:Storage is not connected" */
+function flashText(prefix) {
+  return state.flash.indexOf(prefix + ':') === 0 ? state.flash.slice(prefix.length + 1) : '';
 }
 
 /* go('services', 'policies') opens the page and scrolls to the element with that id */
@@ -517,8 +621,12 @@ function reviewsPage() {
           '</div>' +
           (state.flash === 'review-sent'
             ? '<span class="rv-note ok-dark">Thank you — sent to ' + esc(first) + ' for approval.</span>'
+            : state.flash === 'sending'
+              ? '<span class="rv-note">Sending…</span>'
             : state.flash === 'review-error'
               ? '<span class="rv-note err-dark">Add your name and either a few words or a picture.</span>'
+            : flashText('send-error')
+              ? '<span class="rv-note err-dark">Could not send: ' + esc(flashText('send-error')) + '</span>'
               : '<span class="rv-note">Nothing appears until ' + esc(first) + ' approves it.</span>') +
         '</div>' +
       '</div>' +
@@ -597,8 +705,8 @@ function bookingPage() {
     '<section class="confirm">' +
       '<div>' +
         '<div class="step-head"><span class="step-num">STEP 04</span><h2 class="step-title">Confirm</h2></div>' +
-        '<p class="confirm-copy">Your request goes straight to Rosé\'s studio panel. ' +
-          'She confirms it, and you get a note back.</p>' +
+        '<p class="confirm-copy">Your request goes straight to the studio. ' +
+          'Once it is confirmed you will get a note back.</p>' +
       '</div>' +
       '<div class="summary">' +
         '<div class="sum-row"><span>Service</span><span>' + esc(d.form.svc || '—') + '</span></div>' +
@@ -608,9 +716,11 @@ function bookingPage() {
         '<div class="rule"></div>' +
         '<span class="btn-confirm" data-act="sendBooking">REQUEST THIS APPOINTMENT</span>' +
         (state.flash === 'booking-sent'
-          ? '<p class="ok">Sent. It is now waiting in the studio panel as a pending booking.</p>' : '') +
+          ? '<p class="ok">Sent. Your request is with the studio — you will hear back to confirm.</p>' : '') +
+        (state.flash === 'sending' ? '<p class="form-note">Sending…</p>' : '') +
         (state.flash === 'booking-error'
           ? '<p class="err">Add your name, a service, a date and a time first.</p>' : '') +
+        (flashText('send-error') ? '<p class="err">Could not send: ' + esc(flashText('send-error')) + '</p>' : '') +
       '</div>' +
     '</section>' +
   '</div>';
@@ -637,6 +747,8 @@ function contactPage() {
         '<textarea rows="5" data-k="cform.message" placeholder="Your message">' + esc(d.cform.message) + '</textarea>' +
         '<span class="btn-msg" data-act="sendMessage">SEND MESSAGE</span>' +
         (state.flash === 'message-sent' ? '<p class="ok">Sent — it is in the studio inbox.</p>' : '') +
+        (state.flash === 'sending' ? '<p class="form-note">Sending…</p>' : '') +
+        (flashText('send-error') ? '<p class="err">Could not send: ' + esc(flashText('send-error')) + '</p>' : '') +
       '</div>' +
       '<div class="contact-info">' +
         '<div class="info"><span class="info-label">INSTAGRAM</span>' +
@@ -690,6 +802,16 @@ function footer() {
    ========================================================================= */
 
 function loginPage() {
+  var note;
+  if (API.remote && state.loginConfigured === false) {
+    note = '<p class="err">No studio password is set yet. In Vercel, add STUDIO_PASSWORD under the project\'s Environment Variables, then redeploy.</p>';
+  } else if (state.loginError) {
+    note = '<p class="err">' + esc(state.loginError) + '</p>';
+  } else if (!API.remote) {
+    note = '<p class="form-note">Local copy — any password gets you in. The real password is set in Vercel.</p>';
+  } else {
+    note = '';
+  }
   return '<div class="login page-fade">' +
     '<div class="login-art">' +
       '<div class="login-art-inner">' +
@@ -699,20 +821,13 @@ function loginPage() {
     '</div>' +
     '<div class="login-form">' +
       '<div>' +
-        '<h1>Welcome back, Rosé.</h1>' +
+        '<h1>Welcome back.</h1>' +
         '<p class="lede">Sign in to manage bookings and update the website.</p>' +
       '</div>' +
-      '<div class="info"><span class="info-label">EMAIL</span>' +
-        '<input type="text" placeholder="rose@rosecreativeartistry.com"></div>' +
       '<div class="info"><span class="info-label">PASSWORD</span>' +
-        '<input type="password" placeholder="••••••••••••"></div>' +
-      '<span class="btn-signin" data-act="signIn">SIGN IN</span>' +
-      '<div class="demo-box">' +
-        '<p class="t">DEMO LOGIN</p>' +
-        '<p class="b">Email <strong>rose@rosecreativeartistry.com</strong><br>' +
-          'Password <strong>RoseStudio2026</strong></p>' +
-        '<p class="s">A demo sign-in — any details get you in. Real passwords come with the live build.</p>' +
-      '</div>' +
+        '<input type="password" id="pw" placeholder="••••••••••••" autocomplete="current-password"></div>' +
+      '<span class="btn-signin" data-act="signIn">' + (state.flash === 'signing-in' ? 'SIGNING IN…' : 'SIGN IN') + '</span>' +
+      note +
       '<span class="back-link" data-act="go:home">← Back to the website</span>' +
     '</div>' +
   '</div>';
@@ -749,8 +864,10 @@ function panel() {
     '<div class="main">' +
       '<div class="main-head">' +
         '<h1>' + esc(SECTIONS[state.section] || 'Bookings') + '</h1>' +
-        '<span class="main-note">Changes save as you type and show on the website straight away</span>' +
+        '<span class="main-note">' + esc(state.saveNote || 'Changes save as you type and show on the website straight away') + '</span>' +
       '</div>' +
+      (state.storageError ? '<p class="err panel-err">Nothing can be saved yet: ' + esc(state.storageError) + ' See Settings → Connections.</p>' : '') +
+      (flashText('inbox-error') ? '<p class="err panel-err">' + esc(flashText('inbox-error')) + '</p>' : '') +
       body() +
     '</div>' +
   '</div>';
@@ -1030,6 +1147,23 @@ function panelMessages() {
   '</div>';
 }
 
+/* what the server has connected, so it is obvious what still needs setting up in Vercel */
+function connections() {
+  var su = state.setup || {};
+  function row(ok, label, hint) {
+    return '<div class="conn' + (ok ? ' on' : '') + '"><span class="conn-dot"></span>' +
+      '<span class="conn-label">' + label + '</span>' +
+      '<span class="conn-hint">' + (ok ? 'Connected' : hint) + '</span></div>';
+  }
+  return '<p class="eyebrow" style="margin-top:36px">CONNECTIONS</p>' +
+    '<div class="conn-list">' +
+      row(su.storage,  'Storage',  'Add Upstash Redis in the Vercel Storage tab') +
+      row(su.photos,   'Photos',   'Add Blob in the Vercel Storage tab') +
+      row(su.whatsapp, 'WhatsApp', 'Set WHATSAPP_PHONE and CALLMEBOT_APIKEY') +
+      row(su.email,    'Email',    'Set RESEND_API_KEY and NOTIFY_EMAIL') +
+    '</div>';
+}
+
 function panelSettings() {
   var d = state.data;
   return '<div class="main-body mid">' +
@@ -1040,6 +1174,7 @@ function panelSettings() {
       '<input type="text" value="' + esc(d.brand.email) + '" data-k="brand.email" placeholder="hello@…"></div>' +
     '<div class="field"><span class="field-label">Studio address</span>' +
       '<textarea rows="3" data-k="brand.address">' + esc(d.brand.address) + '</textarea></div>' +
+    (API.remote ? connections() : '') +
     '<div class="danger">' +
       '<p>START FRESH</p>' +
       '<p>Wipes every booking, review, message and photo, and empties all the copy back to a blank site. ' +
@@ -1070,18 +1205,67 @@ function render() {
     html += footer();
   }
 
+  /* remember where the caret was, so a re-render mid-typing does not throw the visitor out of the field */
+  var active = document.activeElement, key = active && (active.getAttribute('data-k') || active.id), pos = null;
+  if (key && typeof active.selectionStart === 'number') pos = [active.selectionStart, active.selectionEnd];
+
   document.getElementById('app').innerHTML = html;
+
+  if (key) {
+    var again = document.querySelector('[data-k="' + key + '"]') || document.getElementById(key);
+    if (again && again !== document.activeElement) {
+      again.focus();
+      if (pos && typeof again.setSelectionRange === 'function') { try { again.setSelectionRange(pos[0], pos[1]); } catch (e) {} }
+    }
+  }
 }
 
 /* =========================================================================
    ACTIONS  —  wired by data-act="name:argument"
    ========================================================================= */
 
+/* one server call for an inbox item, or the same change made locally */
+function inbox(kind, method, payload, apply) {
+  if (!API.remote) { apply(); save(); render(); return; }
+  API.call(method, '/api/' + kind, payload)
+    .then(function () { apply(); render(); })
+    .catch(function (e) { flash('inbox-error:' + e.message); });
+}
+
+/* a public form: send it to the server, or keep it here on a local copy */
+function submit(path, payload, local, okFlash) {
+  if (!API.remote) { local(); save(); flash(okFlash); return; }
+  flash('sending');
+  API.post(path, payload)
+    .then(function () { flash(okFlash); })
+    .catch(function (e) { flash('send-error:' + e.message); });
+}
+
 var actions = {
   go:      function (p) { var h = p.split('#'); go(h[0], h[1]); },
   sec:     function (s) { goSection(s); },
-  signIn:  function () { state.logged = true; render(); window.scrollTo(0, 0); },
-  signOut: function () { state.logged = false; state.page = 'home'; render(); window.scrollTo(0, 0); },
+
+  signIn: function () {
+    var pw = document.getElementById('pw');
+    if (!API.remote) { state.logged = true; render(); window.scrollTo(0, 0); return; }
+    state.loginError = '';
+    flash('signing-in');
+    API.post('/api/session', { password: pw ? pw.value : '' })
+      .then(function () { return API.get('/api/session'); })
+      .then(function (r) {
+        state.logged = true; state.setup = r.setup || null; state.flash = '';
+        render(); window.scrollTo(0, 0);
+        loadInbox();
+      })
+      .catch(function (e) { state.loginError = e.message; state.flash = ''; render(); });
+  },
+  signOut: function () {
+    if (API.remote) API.del('/api/session').catch(function () {});
+    state.logged = false; state.page = 'home';
+    state.data.bookings = []; state.data.messages = [];
+    if (API.remote) API.get('/api/content').then(function (r) { state.data.reviews = r.reviews || []; render(); }).catch(function () {});
+    render(); window.scrollTo(0, 0);
+  },
 
   /* booking flow */
   book: function (i) {
@@ -1096,40 +1280,37 @@ var actions = {
   sendBooking: function () {
     var f = state.data.form;
     if (!f.name || !f.svc || !f.date || !f.time) { flash('booking-error'); return; }
-    state.data.bookings.unshift({
-      id: 'b' + Date.now(),
+    var item = {
+      id: 'b' + Date.now(), at: Date.now(),
       name: f.name, contact: f.contact, email: f.email,
       occasion: f.occasion, notes: f.notes, service: f.svc,
       date: f.date + ' ' + monthMeta().label, time: f.time,
       place: f.place || 'Studio', status: 'pending'
-    });
+    };
+    submit('/api/bookings', item, function () { state.data.bookings.unshift(item); }, 'booking-sent');
     f.name = ''; f.contact = ''; f.email = ''; f.occasion = ''; f.notes = '';
-    save();
-    flash('booking-sent');
+    saveForms();
   },
 
   sendReview: function () {
     var r = state.data.rform;
     if (!r.name || (!r.text && !r.img)) { flash('review-error'); return; }
-    state.data.reviews.unshift({
-      id: 'r' + Date.now(), name: r.name, service: r.service || '', text: r.text || '', img: r.img || '',
+    var item = {
+      id: 'r' + Date.now(), at: Date.now(), name: r.name, service: r.service || '', text: r.text || '', img: r.img || '',
       published: false, featured: false
-    });
+    };
+    submit('/api/reviews', item, function () { state.data.reviews.unshift(item); }, 'review-sent');
     state.data.rform = { name: '', service: '', text: '', img: '' };
-    save();
-    flash('review-sent');
+    saveForms();
   },
 
   sendMessage: function () {
     var c = state.data.cform;
     if (!c.name || !c.message) return;
-    state.data.messages.unshift({
-      id: 'm' + Date.now(), name: c.name, email: c.email,
-      topic: c.topic, message: c.message, read: false
-    });
+    var item = { id: 'm' + Date.now(), at: Date.now(), name: c.name, email: c.email, topic: c.topic, message: c.message, read: false };
+    submit('/api/messages', item, function () { state.data.messages.unshift(item); }, 'message-sent');
     state.data.cform = { name: '', email: '', topic: '', message: '' };
-    save();
-    flash('message-sent');
+    saveForms();
   },
 
   /* panel — content */
@@ -1138,38 +1319,60 @@ var actions = {
   galRemove: function (i) { state.data.gallery.splice(Number(i), 1); save(); render(); },
 
   /* panel — bookings */
-  bConfirm:  function (i) { setPath('bookings.' + i + '.status', 'confirmed'); render(); },
-  bComplete: function (i) { setPath('bookings.' + i + '.status', 'completed'); render(); },
-  bCancel:   function (i) { setPath('bookings.' + i + '.status', 'cancelled'); render(); },
-  bRemove:   function (i) { state.data.bookings.splice(Number(i), 1); save(); render(); },
+  bConfirm:  function (i) { setStatus(i, 'confirmed'); },
+  bComplete: function (i) { setStatus(i, 'completed'); },
+  bCancel:   function (i) { setStatus(i, 'cancelled'); },
+  bRemove:   function (i) {
+    var b = state.data.bookings[Number(i)];
+    inbox('bookings', 'DELETE', { id: b.id }, function () { state.data.bookings.splice(Number(i), 1); });
+  },
   clearCompleted: function () {
-    state.data.bookings = state.data.bookings.filter(function (b) {
-      return b.status !== 'completed' && b.status !== 'cancelled';
+    inbox('bookings', 'DELETE', { clear: true }, function () {
+      state.data.bookings = state.data.bookings.filter(function (b) {
+        return b.status !== 'completed' && b.status !== 'cancelled';
+      });
     });
-    save(); render();
   },
 
   /* panel — reviews */
-  rPublish:   function (i) { setPath('reviews.' + i + '.published', true); render(); },
-  rUnpublish: function (i) { setPath('reviews.' + i + '.published', false); render(); },
+  rPublish:   function (i) { setPublished(i, true); },
+  rUnpublish: function (i) { setPublished(i, false); },
   rFeature:   function (i) {
-    state.data.reviews.forEach(function (r, j) { r.featured = (j === Number(i)); });
-    state.data.reviews[Number(i)].published = true;
-    save(); render();
+    var r = state.data.reviews[Number(i)];
+    inbox('reviews', 'PATCH', { id: r.id, featured: true }, function () {
+      state.data.reviews.forEach(function (x, j) { x.featured = (j === Number(i)); });
+      r.published = true;
+    });
   },
-  rRemove: function (i) { state.data.reviews.splice(Number(i), 1); save(); render(); },
+  rRemove: function (i) {
+    var r = state.data.reviews[Number(i)];
+    inbox('reviews', 'DELETE', { id: r.id }, function () { state.data.reviews.splice(Number(i), 1); });
+  },
 
   /* panel — messages */
-  mRemove: function (i) { state.data.messages.splice(Number(i), 1); save(); render(); },
+  mRemove: function (i) {
+    var m = state.data.messages[Number(i)];
+    inbox('messages', 'DELETE', { id: m.id }, function () { state.data.messages.splice(Number(i), 1); });
+  },
 
   /* panel — settings */
   resetAll: function () {
     if (!window.confirm('Clear everything and start fresh? Bookings, reviews, messages, photos and all copy will be wiped.')) return;
-    state.data = blank();
-    state.section = 'bookings';
-    save(); render();
+    var wipe = function () { state.data = blank(); state.section = 'bookings'; render(); };
+    if (!API.remote) { wipe(); save(); return; }
+    API.post('/api/reset').then(wipe).catch(function (e) { flash('inbox-error:' + e.message); });
   }
 };
+
+function setStatus(i, status) {
+  var b = state.data.bookings[Number(i)];
+  inbox('bookings', 'PATCH', { id: b.id, status: status }, function () { b.status = status; });
+}
+
+function setPublished(i, on) {
+  var r = state.data.reviews[Number(i)];
+  inbox('reviews', 'PATCH', { id: r.id, published: on }, function () { r.published = on; if (!on) r.featured = false; });
+}
 
 /* =========================================================================
    EVENTS
@@ -1187,25 +1390,29 @@ app.addEventListener('click', function (e) {
   if (actions[name]) actions[name](arg, el);
 });
 
+app.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' && e.target.id === 'pw') actions.signIn();
+});
+
 /* Typing saves without re-rendering, so the caret stays put. */
 app.addEventListener('input', function (e) {
   var k = e.target.getAttribute && e.target.getAttribute('data-k');
   if (k) setPath(k, e.target.value);
 });
 
-/* Leaving a field re-renders, so the site picks up the new text. */
+/* Leaving a field re-renders, so the site picks up the new text.
+   The render waits a tick so focus has already moved to the next field, and stays there. */
 app.addEventListener('change', function (e) {
   var t = e.target;
   if (t.type === 'file') { handleUpload(t); return; }
   var k = t.getAttribute && t.getAttribute('data-k');
-  if (k) { setPath(k, t.value); render(); }
+  if (k) { setPath(k, t.value); setTimeout(render, 0); }
 });
 
 /* --- image uploads ------------------------------------------------------ */
 
-/* Photos are stored in the browser as data URLs, so they are shrunk first
-   to keep localStorage from filling up. */
-/* max: longest side in px. png: keep transparency (logos, cut-outs) instead of flattening to jpeg */
+/* Photos are shrunk in the browser before they go anywhere.
+   max: longest side in px. png: keep transparency (logos, cut-outs) instead of flattening to jpeg */
 function shrink(url, done, max, png) {
   var img = new Image();
   img.onload = function () {
@@ -1229,13 +1436,21 @@ function handleUpload(input) {
   var icon = path.indexOf('home.quickIcons.') === 0;
   var png  = file.type === 'image/png' && /^home\.(quickIcons|heroImg|ctaImg)/.test(path);
 
+  var place = function (url) {
+    if (path === 'gallery') { state.data.gallery.unshift(url); save(); }
+    else setPath(path, url);
+    render();
+  };
+
   var reader = new FileReader();
   reader.onload = function () {
-    shrink(String(reader.result), function (url) {
-      if (path === 'gallery') state.data.gallery.unshift(url);
-      else setPath(path, url);
-      save();
-      render();
+    shrink(String(reader.result), function (dataUrl) {
+      /* a visitor's review picture rides along with the review; everything else goes up now */
+      if (!API.remote || path === 'rform.img') { place(dataUrl); return; }
+      setSaveNote('Uploading photo…');
+      API.post('/api/upload', { data: dataUrl })
+        .then(function (r) { place(r.url); })
+        .catch(function (e) { flash('inbox-error:' + e.message); });
     }, icon ? 320 : path === 'rform.img' ? 900 : 1200, png);
   };
   reader.readAsDataURL(file);
@@ -1243,5 +1458,4 @@ function handleUpload(input) {
 
 /* --- start -------------------------------------------------------------- */
 
-load();
-render();
+boot();

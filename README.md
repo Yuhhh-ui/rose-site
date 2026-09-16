@@ -1,7 +1,7 @@
 # ROSÉ Creative Artistry — website + studio panel
 
-Plain HTML, CSS and JavaScript. No build step, no npm install, no framework.
-Open `index.html` in any browser and it runs.
+Plain HTML, CSS and JavaScript on the front, a handful of small Vercel
+functions on the back. No framework, no build step.
 
 ## Files
 
@@ -10,19 +10,29 @@ Open `index.html` in any browser and it runs.
 | `index.html` | The page shell: fonts, stylesheet, scripts. Almost nothing else. |
 | `styles.css` | All styling. Colours and fonts are variables at the top under `:root`. |
 | `content.js` | The words, services and lash list a fresh site starts with. Safe to edit. |
+| `client.js` | Talks to the server. Decides whether the site is running on Vercel or from disk. |
 | `app.js` | State, the six public pages, and the studio panel. |
+| `api/` | The server: one file per thing (content, session, bookings, reviews, messages, upload, reset). |
+| `lib/` | Shared server code: storage, login, photos, notifications. |
+| `dev-server.js` | Runs the whole thing locally with an in-memory store. |
+| `.github/workflows/deploy.yml` | Deploys every push to `main` to Vercel. |
 
 ## Running it
 
-Double-click `index.html`. That's it.
+**Just the pages, no server.** Double-click `index.html`. Everything you do is
+kept in that browser only. Handy for looking at the design.
 
-If you'd rather serve it (needed if you later add fetch calls or images from disk):
+**The real thing, locally.**
 
 ```
-cd rose-site
-python3 -m http.server 8000
-# then open http://localhost:8000
+npm install
+npm run dev
+# open http://localhost:3000 — studio password is "rose"
 ```
+
+The dev server runs the same functions Vercel does, but keeps everything in
+memory (it forgets when you stop it) and stores photos inline instead of in
+Blob storage.
 
 ## How it's put together
 
@@ -50,8 +60,8 @@ Clicks are wired with attributes, not inline handlers:
 ```
 
 One listener at the top of the page reads `data-act`, splits it on the first
-colon, and calls the matching function in the `actions` object at the bottom of
-`app.js`.
+colon, and calls the matching function in the `actions` object near the bottom
+of `app.js`. `go:services#policies` opens a page and scrolls to an id.
 
 Text fields carry `data-k="home.headline"` — a dotted path into `state.data`.
 Typing saves; leaving the field re-renders. File inputs carry
@@ -60,29 +70,58 @@ Typing saves; leaving the field re-renders. File inputs carry
 ## Where things live
 
 - **Add a public page** — write a `xxxPage()` function, add a line to `render()`,
-  add a `<span class="nav-link" data-act="go:xxx">` in `nav()`.
+  add a link in `nav()`.
 - **Add a panel section** — add an entry to `SECTIONS` at the top of `app.js`,
   write a `panelXxx()` function, add it to the lookup object in `panel()`.
 - **Change colours or type** — `:root` in `styles.css`.
 - **Change the starting copy** — `content.js`.
 
-## Saving
+## Saving, for real
 
-Everything the studio panel edits is saved to the browser's `localStorage`
-under the key `rose-studio-v1`. That means:
+On Vercel the site content, bookings, reviews and messages live on the
+server, so the panel works from any device and visitors see what Rosé sets.
+Half-filled forms are the only thing kept in the visitor's browser.
 
-- it survives refreshes and closing the browser
-- it does **not** travel between devices or browsers
-- uploaded photos are stored as compressed data URLs (shrunk to 1200px max)
+| Piece | Service | Set up by |
+|---|---|---|
+| Content + bookings + reviews + messages | Upstash Redis | Vercel project → Storage → Create → Upstash Redis |
+| Photos | Vercel Blob | Vercel project → Storage → Create → Blob |
+| Studio password | — | Environment variable `STUDIO_PASSWORD` |
+| WhatsApp alerts | CallMeBot | `WHATSAPP_PHONE` and `CALLMEBOT_APIKEY` |
+| Email alerts | Resend | `RESEND_API_KEY` and `NOTIFY_EMAIL` |
 
-The login is a demo — any email and password get you in. There is no server and
-no real authentication. When this goes live, bookings, reviews, messages and
-photos need a backend; `localStorage` is a stand-in so the whole flow can be
-tried out now.
+The two storage add-ons set their own environment variables. After adding
+any of these, redeploy (Actions → Deploy to Vercel → Run workflow).
+
+Settings → Connections inside the panel shows what is connected.
+
+### Environment variables
+
+| Name | What it is |
+|---|---|
+| `STUDIO_PASSWORD` | The panel password. Changing it signs everyone out. |
+| `WHATSAPP_PHONE` | Your number with country code, e.g. `+18695550100`. |
+| `CALLMEBOT_APIKEY` | From CallMeBot: send "I allow callmebot to send me messages" on WhatsApp to +34 644 10 93 63 and it replies with your key. |
+| `RESEND_API_KEY` | From resend.com → API Keys. |
+| `NOTIFY_EMAIL` | Where alerts go. Without a verified domain, Resend only delivers to the address that owns the Resend account. |
+| `NOTIFY_FROM` | Optional sender, once you have a verified domain in Resend. |
+
+### The API
+
+All JSON. "studio" means the session cookie from logging in is required.
+
+| Route | Methods |
+|---|---|
+| `/api/session` | `GET` am I logged in · `POST {password}` · `DELETE` |
+| `/api/content` | `GET` the site + published reviews · `PUT {content}` studio |
+| `/api/bookings` | `POST` new request · `GET` studio · `PATCH {id,status}` studio · `DELETE {id}` or `{clear:true}` studio |
+| `/api/reviews` | `GET` published (all, for studio) · `POST {name,text,img}` · `PATCH {id,published}` or `{id,featured:true}` studio · `DELETE {id}` studio |
+| `/api/messages` | `POST` · `GET` studio · `DELETE {id}` studio |
+| `/api/upload` | `POST {data}` studio → `{url}` |
+| `/api/reset` | `POST` studio — wipes everything |
 
 ## Not built yet
 
-- real sign-in
-- email or WhatsApp notifications when a booking comes in
 - a live calendar that blocks dates already taken
 - payments / deposits
+- a note back to the client when a booking is confirmed

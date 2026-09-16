@@ -1,0 +1,12 @@
+{
+  "name": "rose-site",
+  "private": true,
+  "type": "module",
+  "description": "ROSÉ Creative Artistry — static site plus a few Vercel functions",
+  "scripts": {
+    "dev": "node dev-server.js"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.8.0"
+  }
+}
