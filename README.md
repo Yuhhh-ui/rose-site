@@ -87,9 +87,15 @@ Half-filled forms are the only thing kept in the visitor's browser.
 | Content + bookings + reviews + messages | Upstash Redis | Vercel project → Storage → Create → Upstash Redis |
 | Photos | Vercel Blob | Vercel project → Storage → Create → Blob |
 | Studio password | — | Environment variable `STUDIO_PASSWORD` |
+| WhatsApp alerts | Twilio | The four `TWILIO_*` / `WHATSAPP_PHONE` variables below |
+| WhatsApp alerts, free | CallMeBot | `WHATSAPP_PHONE` and `CALLMEBOT_APIKEY` |
 | Phone alerts | ntfy | `NTFY_TOPIC` — no account needed |
-| WhatsApp alerts | CallMeBot | `WHATSAPP_PHONE` and `CALLMEBOT_APIKEY` |
 | Email alerts | Resend | `RESEND_API_KEY` and `NOTIFY_EMAIL` |
+
+A client can also tap **Message it on WhatsApp too** on the booking
+confirmation, which opens their own WhatsApp with the booking written out.
+That needs no API at all; set the studio's number in Settings → WhatsApp
+number to switch it on.
 
 The two storage add-ons set their own environment variables. After adding
 any of these, redeploy (Actions → Deploy to Vercel → Run workflow).
@@ -102,9 +108,12 @@ Settings → Connections inside the panel shows what is connected, and
 | Name | What it is |
 |---|---|
 | `STUDIO_PASSWORD` | The panel password. Changing it signs everyone out. |
+| `TWILIO_ACCOUNT_SID` | From the Twilio console home page. Starts with `AC`. |
+| `TWILIO_AUTH_TOKEN` | Next to the SID on the same page. |
+| `TWILIO_WHATSAPP_FROM` | The Twilio WhatsApp number. The sandbox one is `+14155238886`. |
+| `WHATSAPP_PHONE` | Where alerts go: your own number with country code, e.g. `+18695550100`. Shared with CallMeBot. |
 | `NTFY_TOPIC` | Any long, hard-to-guess name, e.g. `rose-studio-a7f3k9qz`. Install the ntfy app, subscribe to that exact name, and alerts arrive as phone notifications. Anyone who knows the name can read the alerts, so keep it long and private. |
 | `NTFY_SERVER` | Optional. Defaults to `https://ntfy.sh`. |
-| `WHATSAPP_PHONE` | Your number with country code, e.g. `+18695550100`. |
 | `CALLMEBOT_APIKEY` | From CallMeBot: send "I allow callmebot to send me messages" on WhatsApp to +34 644 10 93 63 and it replies with your key. CallMeBot is a free hobby service and is often slow or down. |
 | `RESEND_API_KEY` | From resend.com → API Keys. |
 | `NOTIFY_EMAIL` | Where alerts go. Without a verified domain, Resend only delivers to the address that owns the Resend account. |
@@ -124,6 +133,20 @@ All JSON. "studio" means the session cookie from logging in is required.
 | `/api/upload` | `POST {data}` studio → `{url}` |
 | `/api/reset` | `POST` studio — wipes everything |
 | `/api/notify-test` | `POST` studio — sends a test alert, reports per-channel results |
+
+### Twilio WhatsApp, in short
+
+1. Sign up at twilio.com and open Messaging → Try it out → Send a WhatsApp message.
+2. The sandbox shows a number and a phrase like `join amber-tiger`. Send that
+   phrase on WhatsApp from the phone that should receive alerts.
+3. Copy the Account SID and Auth Token from the console home page.
+4. Add the four variables above in Vercel and redeploy.
+5. Studio panel → Settings → Send a test alert.
+
+The sandbox drops a number that has been quiet for 72 hours, and free-form
+messages only send inside 24 hours of your last message to it. Sending the
+join phrase again fixes both. To remove that limit, apply for a WhatsApp
+sender in Twilio and use an approved template.
 
 ## Not built yet
 

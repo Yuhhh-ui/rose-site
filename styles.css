@@ -660,6 +660,14 @@ textarea { resize: vertical; line-height: 1.7; }
 .a-toggle { cursor: pointer; font-size: 9.5px; letter-spacing: .16em; color: var(--gold); }
 
 .panel-err { padding: 0 40px 12px; }
+.btn-wa {
+  display: inline-block; margin-top: 14px; padding: 14px 28px;
+  background: #25D366; color: #0B0A09;
+  font-size: 10px; font-weight: 500; letter-spacing: .22em;
+  transition: background-color .28s ease;
+}
+.btn-wa:hover { background: #1FB855; color: #0B0A09; }
+
 .test-results { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
 .test-results p { line-height: 1.6; }
 .conn-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }

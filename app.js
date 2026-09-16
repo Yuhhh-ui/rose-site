@@ -37,7 +37,8 @@ var state = {
   loginError: '',      // shown on the login page
   saveNote: '',        // "Saving…" / "Saved" in the panel header
   storageError: '',    // set when the server has no storage connected yet
-  notifyTest: null     // result of Settings → Send a test alert
+  notifyTest: null,    // result of Settings → Send a test alert
+  lastBooking: null    // the booking just sent, for the WhatsApp link on the confirmation
 };
 
 /* --- storage ------------------------------------------------------------ */
@@ -566,6 +567,28 @@ function artistPage() {
   '</div>';
 }
 
+/* A wa.me link the client can tap to send the booking straight to Rosé's WhatsApp.
+   Free, instant and needs no API — it just opens their own WhatsApp with the
+   message written. Only offered when a WhatsApp number is set in Settings. */
+function whatsappBookingLink() {
+  var num = String(state.data.brand.whatsapp || '').replace(/[^\d]/g, '');
+  if (!num) return '';
+  var f = state.lastBooking;
+  if (!f) return '';
+  var lines = [
+    'Hi! I just requested an appointment on your website.',
+    '',
+    'Name: ' + f.name,
+    'Service: ' + f.service,
+    'When: ' + f.date + ' at ' + f.time,
+    'Where: ' + f.place
+  ];
+  if (f.contact) lines.push('Contact: ' + f.contact);
+  if (f.occasion) lines.push('Occasion: ' + f.occasion);
+  if (f.notes) lines.push('Notes: ' + f.notes);
+  return 'https://wa.me/' + num + '?text=' + encodeURIComponent(lines.join('\n'));
+}
+
 /* the review quoted at the top of the reviews page: featured first, but it must have words */
 function quotedReview() {
   var rs = state.data.reviews.filter(function (r) { return r.published && r.text; });
@@ -717,7 +740,11 @@ function bookingPage() {
         '<div class="rule"></div>' +
         '<span class="btn-confirm" data-act="sendBooking">REQUEST THIS APPOINTMENT</span>' +
         (state.flash === 'booking-sent'
-          ? '<p class="ok">Sent. Your request is with the studio — you will hear back to confirm.</p>' : '') +
+          ? '<p class="ok">Sent. Your request is with the studio — you will hear back to confirm.</p>' +
+            (whatsappBookingLink()
+              ? '<a class="btn-wa" href="' + esc(whatsappBookingLink()) + '" target="_blank" rel="noopener">MESSAGE IT ON WHATSAPP TOO</a>'
+              : '')
+          : '') +
         (state.flash === 'sending' ? '<p class="form-note">Sending…</p>' : '') +
         (state.flash === 'booking-error'
           ? '<p class="err">Add your name, a service, a date and a time first.</p>' : '') +
@@ -1148,7 +1175,7 @@ function panelMessages() {
   '</div>';
 }
 
-var LABELS = { push: 'Push', whatsapp: 'WhatsApp', email: 'Email' };
+var LABELS = { whatsapp: 'WhatsApp (Twilio)', callmebot: 'WhatsApp (CallMeBot)', push: 'Push', email: 'Email' };
 
 /* what the server has connected, so it is obvious what still needs setting up in Vercel */
 function connections() {
@@ -1177,9 +1204,10 @@ function connections() {
     '<div class="conn-list">' +
       row(su.storage,  'Storage',  'Add Upstash Redis in the Vercel Storage tab') +
       row(su.photos,   'Photos',   'Add Blob in the Vercel Storage tab') +
-      row(su.push,     'Push',     'Set NTFY_TOPIC — the simplest way to get alerts') +
-      row(su.whatsapp, 'WhatsApp', 'Set WHATSAPP_PHONE and CALLMEBOT_APIKEY') +
-      row(su.email,    'Email',    'Set RESEND_API_KEY and NOTIFY_EMAIL') +
+      row(su.whatsapp,  'WhatsApp', 'Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM and WHATSAPP_PHONE') +
+      row(su.callmebot, 'CallMeBot', 'Free WhatsApp fallback: WHATSAPP_PHONE and CALLMEBOT_APIKEY') +
+      row(su.push,      'Push',      'Set NTFY_TOPIC — phone notifications, no account') +
+      row(su.email,     'Email',     'Set RESEND_API_KEY and NOTIFY_EMAIL') +
     '</div>' +
     '<span class="btn-sm" style="margin-top:16px" data-act="testAlert">SEND A TEST ALERT</span>' +
     results;
@@ -1195,6 +1223,8 @@ function panelSettings() {
       '<input type="text" value="' + esc(d.brand.email) + '" data-k="brand.email" placeholder="hello@…"></div>' +
     '<div class="field"><span class="field-label">Studio address</span>' +
       '<textarea rows="3" data-k="brand.address">' + esc(d.brand.address) + '</textarea></div>' +
+    '<div class="field"><span class="field-label">WhatsApp number — clients get a button to message you the booking</span>' +
+      '<input type="text" value="' + esc(d.brand.whatsapp) + '" data-k="brand.whatsapp" placeholder="+1 869 555 0100"></div>' +
     (API.remote ? connections() : '') +
     '<div class="danger">' +
       '<p>START FRESH</p>' +
@@ -1308,6 +1338,7 @@ var actions = {
       date: f.date + ' ' + monthMeta().label, time: f.time,
       place: f.place || 'Studio', status: 'pending'
     };
+    state.lastBooking = item;
     submit('/api/bookings', item, function () { state.data.bookings.unshift(item); }, 'booking-sent');
     f.name = ''; f.contact = ''; f.email = ''; f.occasion = ''; f.notes = '';
     saveForms();

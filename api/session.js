@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     var out = { logged: logged, configured: configured() };
     if (logged) {
       var n = notifyConfigured();
-      out.setup = { storage: storageReady(), photos: blobReady(), push: n.push, whatsapp: n.whatsapp, email: n.email };
+      out.setup = { storage: storageReady(), photos: blobReady(), whatsapp: n.whatsapp, callmebot: n.callmebot, push: n.push, email: n.email };
     }
     return send(res, 200, out);
   }

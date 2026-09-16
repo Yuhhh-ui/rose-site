@@ -55,7 +55,7 @@ const DEFAULT_CONTENT = {
 
   hours: DAYS.map(function (day) { return { day: day, open: '' }; }),
 
-  brand: { ig: '@makeupbyrose.stkitts', email: '', address: '' },
+  brand: { ig: '@makeupbyrose.stkitts', email: '', address: '', whatsapp: '' },
 
   // filled in as the site is used
   bookings: [],
