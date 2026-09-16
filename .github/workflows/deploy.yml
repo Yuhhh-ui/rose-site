@@ -1,0 +1,35 @@
+# Deploys the site to Vercel on every push to main, whoever made the commit.
+#
+# Vercel's own Git integration only deploys commits whose author has access
+# to the Vercel project, so pushes made on your behalf are skipped. This
+# workflow calls a Vercel Deploy Hook instead, which has no such rule.
+#
+# One-time setup:
+#   1. Vercel → project → Settings → Git → Deploy Hooks → create one for "main"
+#   2. GitHub → repo → Settings → Secrets and variables → Actions →
+#      new repository secret named VERCEL_DEPLOY_HOOK with that URL
+#
+# "Run workflow" in the Actions tab triggers a deploy by hand.
+
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel deploy hook
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::VERCEL_DEPLOY_HOOK secret is not set. See .github/workflows/deploy.yml for setup."
+            exit 1
+          fi
+          curl --fail --silent --show-error -X POST "$HOOK"
+          echo
+          echo "Deploy requested. Watch progress in the Vercel dashboard."
