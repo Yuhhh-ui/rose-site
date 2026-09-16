@@ -17,7 +17,8 @@ const DEFAULT_CONTENT = {
     sub: 'An elevated beauty studio experience. Curated for the woman who values quality, detail & intention.',
     welcome: '',                       // optional second "About" paragraph
     heroImg: '',                       // cut-out portrait beside the headline
-    ctaImg: ''                         // cut-out portrait in the "Book with us" band
+    ctaImg: '',                        // cut-out portrait in the "Book with us" band
+    quickIcons: ['', '', '', '', '', '']  // optional pictures for the six quick-link circles
   },
 
   artist: { intro: '', story: '', approach: '', portrait: '' },

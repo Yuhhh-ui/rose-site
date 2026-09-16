@@ -218,6 +218,7 @@ textarea { resize: vertical; line-height: 1.7; }
 .quick-inner { display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(20px, 4vw, 54px); max-width: 1000px; margin: 0 auto; }
 .quick-link { display: flex; flex-direction: column; align-items: center; gap: 11px; cursor: pointer; width: 82px; }
 .quick-icon {
+  position: relative; overflow: hidden;
   width: 58px; height: 58px; border-radius: 50%; background: var(--sand-ink);
   display: grid; place-items: center; transition: background-color .28s ease;
 }
@@ -540,6 +541,12 @@ textarea { resize: vertical; line-height: 1.7; }
 .a-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .a-toggle-label { font-size: 11px; font-weight: 200; color: var(--dim); }
 .a-toggle { cursor: pointer; font-size: 9.5px; letter-spacing: .16em; color: var(--gold); }
+
+.icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 16px 10px; }
+.icon-cell { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.icon-cell .quick-icon { width: 64px; height: 64px; }
+.icon-name { font-size: 8.5px; font-weight: 300; letter-spacing: .18em; color: var(--mute); }
+.icon-cell .upload { padding: 7px 11px; }
 
 .upload-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .upload {

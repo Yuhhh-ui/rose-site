@@ -170,14 +170,21 @@ var QUICK_LINKS = [
     icon: '<rect x="3" y="5.5" width="18" height="13"/><path d="m3 6.5 9 6.5 9-6.5"/>' }
 ];
 
+/* the circle for quick link i: the uploaded picture if there is one, else the line icon */
+function quickIcon(i) {
+  var url = (state.data.home.quickIcons || [])[i];
+  if (url) return '<div class="quick-icon has-img">' + photo(url, '') + '</div>';
+  return '<div class="quick-icon">' +
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C9A47C" stroke-width="1">' + QUICK_LINKS[i].icon + '</svg>' +
+  '</div>';
+}
+
 function homePage() {
   var d = state.data, h = d.home, a = d.artist;
 
-  var quick = QUICK_LINKS.map(function (q) {
+  var quick = QUICK_LINKS.map(function (q, i) {
     return '<div class="quick-link" data-act="go:' + q.to + '">' +
-      '<div class="quick-icon">' +
-        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C9A47C" stroke-width="1">' + q.icon + '</svg>' +
-      '</div>' +
+      quickIcon(i) +
       '<span class="quick-label">' + q.label + '</span>' +
     '</div>';
   }).join('');
@@ -781,6 +788,17 @@ function panelPages() {
           '<textarea rows="3" data-k="home.sub">' + esc(d.home.sub) + '</textarea></div>' +
         '<div class="field"><span class="field-label">Second about paragraph (optional)</span>' +
           '<textarea rows="5" data-k="home.welcome" placeholder="A few more lines about the studio">' + esc(d.home.welcome) + '</textarea></div>' +
+        '<div class="field"><span class="field-label">Quick link pictures — round photos or logos, one per circle</span>' +
+          '<div class="icon-grid">' + QUICK_LINKS.map(function (q, i) {
+            var has = !!(d.home.quickIcons || [])[i];
+            return '<div class="icon-cell">' +
+              quickIcon(i) +
+              '<span class="icon-name">' + q.label + '</span>' +
+              '<label class="upload">' + (has ? 'CHANGE' : 'UPLOAD') +
+                '<input type="file" accept="image/*" data-upload="home.quickIcons.' + i + '"></label>' +
+              (has ? '<span class="remove-link" data-act="clearImg:home.quickIcons.' + i + '">REMOVE</span>' : '') +
+            '</div>';
+          }).join('') + '</div></div>' +
         '<div class="field"><span class="field-label">Hero portrait — a cut-out photo works best</span>' +
           '<div class="a-img-lg frame">' + photo(d.home.heroImg, 'NO PHOTO') + '</div>' +
           '<label class="upload">UPLOAD<input type="file" accept="image/*" data-upload="home.heroImg"></label></div>' +
@@ -1057,16 +1075,16 @@ app.addEventListener('change', function (e) {
 
 /* Photos are stored in the browser as data URLs, so they are shrunk first
    to keep localStorage from filling up. */
-function shrink(url, done) {
+/* max: longest side in px. png: keep transparency (logos, cut-outs) instead of flattening to jpeg */
+function shrink(url, done, max, png) {
   var img = new Image();
   img.onload = function () {
-    var max = 1200;
-    var scale = Math.min(1, max / Math.max(img.width, img.height));
+    var scale = Math.min(1, (max || 1200) / Math.max(img.width, img.height));
     var c = document.createElement('canvas');
     c.width = Math.round(img.width * scale);
     c.height = Math.round(img.height * scale);
     c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-    done(c.toDataURL('image/jpeg', 0.82));
+    done(png ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.82));
   };
   img.onerror = function () { done(url); };
   img.src = url;
@@ -1078,6 +1096,9 @@ function handleUpload(input) {
   input.value = '';
   if (!file || !path) return;
 
+  var icon = path.indexOf('home.quickIcons.') === 0;
+  var png  = file.type === 'image/png';
+
   var reader = new FileReader();
   reader.onload = function () {
     shrink(String(reader.result), function (url) {
@@ -1085,7 +1106,7 @@ function handleUpload(input) {
       else setPath(path, url);
       save();
       render();
-    });
+    }, icon ? 320 : 1200, png);
   };
   reader.readAsDataURL(file);
 }
