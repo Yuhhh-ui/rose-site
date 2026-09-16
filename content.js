@@ -12,14 +12,15 @@ const TIME_SLOTS = ['9:00 am', '11:30 am', '2:00 pm', '4:30 pm'];
 
 const DEFAULT_CONTENT = {
   home: {
-    headline: 'The Art of Beautifully Done.',
+    script: 'Enhancing your',          // small script line above the headline
+    headline: 'Natural Beauty',        // shown in capitals
     sub: 'An elevated beauty studio experience. Curated for the woman who values quality, detail & intention.',
-    welcome: '',
-    heroImg: '',
-    ctaImg: ''
+    welcome: '',                       // optional second "About" paragraph
+    heroImg: '',                       // cut-out portrait beside the headline
+    ctaImg: ''                         // cut-out portrait in the "Book with us" band
   },
 
-  artist: { story: '', approach: '', portrait: '' },
+  artist: { intro: '', story: '', approach: '', portrait: '' },
 
   services: [
     { name: 'Bridal',        dur: '90 min',  price: '', desc: '', img: '', live: true },

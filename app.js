@@ -42,7 +42,14 @@ function load() {
   state.data = blank();
   try {
     var raw = localStorage.getItem(KEY);
-    if (raw) state.data = Object.assign(blank(), JSON.parse(raw));
+    if (raw) {
+      var saved = JSON.parse(raw);
+      state.data = Object.assign(blank(), saved);
+      /* nested objects are merged too, so fields added later still get their defaults */
+      ['home', 'artist', 'brand'].forEach(function (k) {
+        if (saved[k]) state.data[k] = Object.assign(blank()[k], saved[k]);
+      });
+    }
   } catch (e) { /* private browsing, corrupt data — start blank */ }
 }
 
@@ -97,11 +104,13 @@ function flash(msg) {
   }, 2600);
 }
 
-function go(page) {
+/* go('services', 'policies') opens the page and scrolls to the element with that id */
+function go(page, anchor) {
   state.page = page;
   state.flash = '';
   render();
-  window.scrollTo(0, 0);
+  var el = anchor ? document.getElementById(anchor) : null;
+  if (el) el.scrollIntoView(); else window.scrollTo(0, 0);
 }
 
 function goSection(sec) {
@@ -145,77 +154,141 @@ function nav() {
   '</header>';
 }
 
+/* homepage quick links — page, label, and a 24x24 line icon */
+var QUICK_LINKS = [
+  { to: 'artist',       label: 'THE ARTIST',
+    icon: '<circle cx="12" cy="8" r="4"/><path d="M4.5 21c0-4.1 3.4-7 7.5-7s7.5 2.9 7.5 7"/>' },
+  { to: 'services',     label: 'SERVICES',
+    icon: '<path d="M15 3.5 8 15"/><path d="M18.5 5.5 11.5 17"/><path d="M15 3.5a2 2 0 0 1 3.5 2"/><path d="M8 15c-2 1-2.5 4-2.5 5.5C7 20 10 19.5 11.5 17"/>' },
+  { to: 'artist#work',  label: 'PORTFOLIO',
+    icon: '<rect x="3.5" y="3.5" width="7" height="7"/><rect x="13.5" y="3.5" width="7" height="7"/><rect x="3.5" y="13.5" width="7" height="7"/><rect x="13.5" y="13.5" width="7" height="7"/>' },
+  { to: 'reviews',      label: 'REVIEWS',
+    icon: '<path d="m12 3.6 2.5 5.3 5.5.8-4 4.1 1 5.9-5-2.9-5 2.9 1-5.9-4-4.1 5.5-.8Z"/>' },
+  { to: 'booking',      label: 'BOOKING',
+    icon: '<rect x="3.5" y="5" width="17" height="15.5"/><path d="M3.5 9.5h17M8 3.5v3M16 3.5v3"/>' },
+  { to: 'contact',      label: 'CONTACT',
+    icon: '<rect x="3" y="5.5" width="18" height="13"/><path d="m3 6.5 9 6.5 9-6.5"/>' }
+];
+
 function homePage() {
-  var d = state.data, feat = featuredReview();
+  var d = state.data, h = d.home, a = d.artist;
+
+  var quick = QUICK_LINKS.map(function (q) {
+    return '<div class="quick-link" data-act="go:' + q.to + '">' +
+      '<div class="quick-icon">' +
+        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C9A47C" stroke-width="1">' + q.icon + '</svg>' +
+      '</div>' +
+      '<span class="quick-label">' + q.label + '</span>' +
+    '</div>';
+  }).join('');
 
   var cards = liveServices().map(function (x) {
     return '<article class="svc-card" data-act="go:services">' +
-      '<div class="svc-card-img frame">' + photo(x.s.img, 'PHOTO') + '</div>' +
+      '<div class="svc-card-img">' + photo(x.s.img, 'PHOTO') + '</div>' +
       '<span class="svc-card-name">' + esc(x.s.name) + '</span>' +
       '<span class="svc-card-price">' + esc(money(x.s.price)) + '</span>' +
     '</article>';
   }).join('');
 
-  var portfolio = '';
-  if (d.gallery.length) {
-    portfolio =
-    '<section class="section">' +
-      '<div class="section-head">' +
-        '<p class="eyebrow">PORTFOLIO</p>' +
-        '<span class="link-gold" data-act="go:artist">SEE MORE →</span>' +
-      '</div>' +
-      '<div class="gallery-grid">' +
-        d.gallery.map(function (u) { return '<div class="gallery-tile frame">' + photo(u, '') + '</div>'; }).join('') +
-      '</div>' +
-    '</section>';
-  }
+  /* recent work: the gallery, padded out to a full row of three (six when empty) */
+  var tiles = d.gallery.slice(0, 6);
+  var want = tiles.length ? Math.ceil(tiles.length / 3) * 3 : 6;
+  while (tiles.length < want) tiles.push('');
+  var gallery = tiles.map(function (u) {
+    return '<div class="gallery-tile frame">' + photo(u, 'PHOTO') + '</div>';
+  }).join('');
 
-  var kindWords = '';
-  if (feat) {
-    kindWords =
-    '<section class="featured">' +
-      '<div class="featured-inner">' +
-        '<span class="script">Kind words</span>' +
-        '<p class="quote">' + esc(feat.text) + '</p>' +
-        '<span class="quote-by">— ' + esc(feat.name) + '</span>' +
-        '<span class="quote-link" data-act="go:reviews">ALL REVIEWS</span>' +
-      '</div>' +
-    '</section>';
-  }
+  var repeat = '';
+  for (var i = 0; i < 4; i++) repeat += '<span>Book with us</span>';
 
-  return '<div class="page">' +
-    '<section class="hero">' +
-      '<div class="hero-copy">' +
-        '<span class="script">Rosé</span>' +
-        '<h1 class="hero-title">' + esc(d.home.headline) + '</h1>' +
-        '<p class="hero-sub">' + esc(d.home.sub) + '</p>' +
-        '<div class="row">' +
-          '<span class="btn" data-act="go:booking">BOOK APPOINTMENT</span>' +
-          '<span class="btn-line" data-act="go:services">VIEW SERVICES</span>' +
+  return '<div class="page home">' +
+
+    /* hero */
+    '<section class="hero sand">' +
+      '<div class="hero-inner">' +
+        '<div class="hero-copy">' +
+          '<span class="hero-script">' + esc(h.script) + '</span>' +
+          '<h1 class="hero-title">' + esc(h.headline) + '</h1>' +
+          '<span class="btn-dark" data-act="go:booking">BOOK NOW</span>' +
+        '</div>' +
+        '<div class="hero-figure">' +
+          '<div class="hero-portrait cutout' + (h.heroImg ? ' has-img' : '') + '">' +
+            (h.heroImg
+              ? photo(h.heroImg, '')
+              : '<div class="ph"><span class="ph-label">HERO PORTRAIT<br><small>cut-out works best</small></span></div>') +
+          '</div>' +
         '</div>' +
       '</div>' +
-      '<div class="hero-img frame">' + photo(d.home.heroImg, 'HERO IMAGE') + '</div>' +
     '</section>' +
 
-    '<section class="welcome">' +
-      '<p class="eyebrow">WELCOME</p>' +
-      (d.home.welcome
-        ? '<p class="welcome-text">' + esc(d.home.welcome) + '</p>'
-        : '<p class="welcome-text empty-hint">Your welcome paragraph will appear here — add it in the studio panel.</p>') +
+    /* quick links to every section */
+    '<section class="quick sand">' +
+      '<div class="quick-inner">' + quick + '</div>' +
     '</section>' +
 
-    '<section class="section">' +
-      '<p class="eyebrow center" style="margin-bottom:40px">SERVICES</p>' +
+    /* about + meet the artist */
+    '<section class="about">' +
+      '<div class="band-head">' +
+        '<h2 class="band-title">About</h2>' +
+        '<span class="band-sub">A BEAUTY STUDIO IN ST KITTS</span>' +
+        '<div class="band-rule"></div>' +
+        '<p class="about-text">' + esc(h.sub) + '</p>' +
+        (h.welcome ? '<p class="about-text">' + esc(h.welcome) + '</p>' : '') +
+      '</div>' +
+      '<div class="meet">' +
+        '<div class="meet-figure">' +
+          '<div class="meet-portrait-wrap">' +
+            '<div class="meet-portrait">' + photo(a.portrait, 'PORTRAIT OF ROSÉ') + '</div>' +
+            '<span class="meet-tag">ROSÉ</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="meet-body">' +
+          '<span class="script">Your trusted makeup artist</span>' +
+          '<h3 class="meet-title">Meet the artist</h3>' +
+          (a.intro
+            ? '<p class="meet-intro">' + esc(a.intro) + '</p>'
+            : '<p class="meet-intro empty-hint">A short line about you goes here — add it in the studio panel.</p>') +
+          '<span class="link-gold" data-act="go:artist">READ MY STORY →</span>' +
+        '</div>' +
+      '</div>' +
+    '</section>' +
+
+    /* services */
+    '<section class="home-services sand">' +
+      '<div class="band-head">' +
+        '<h2 class="band-title">Services</h2>' +
+        '<span class="band-sub">MAKEUP FOR EVERY OCCASION</span>' +
+        '<div class="band-rule"></div>' +
+      '</div>' +
       '<div class="svc-grid">' + cards + '</div>' +
     '</section>' +
 
-    portfolio + kindWords +
-
-    '<div class="closing frame">' + photo(d.home.ctaImg, 'CLOSING IMAGE') + '</div>' +
-    '<section class="cta-band">' +
-      '<h2 class="cta-title">Book with us</h2>' +
-      '<span class="btn" data-act="go:booking">GO TO BOOKING</span>' +
+    /* book with us */
+    '<section class="bookband sand">' +
+      '<div class="bookband-stack">' +
+        '<div class="bookband-words" aria-hidden="true">' + repeat + '</div>' +
+        '<div class="bookband-figure">' +
+          '<div class="bookband-cutout cutout' + (h.ctaImg ? ' has-img' : '') + '">' + photo(h.ctaImg, 'CUT-OUT PORTRAIT') + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="bookband-cta">' +
+        '<span class="btn-dark" data-act="go:booking">GO TO BOOKING PAGE</span>' +
+      '</div>' +
     '</section>' +
+
+    /* portfolio */
+    '<section class="home-portfolio">' +
+      '<div class="band-head">' +
+        '<h2 class="band-title">Portfolio</h2>' +
+        '<span class="band-sub">RECENT WORK</span>' +
+        '<div class="band-rule"></div>' +
+      '</div>' +
+      '<div class="gallery-grid">' + gallery + '</div>' +
+      '<div class="gallery-cta">' +
+        '<span class="btn-ghost" data-act="go:artist#work">SEE THE FULL GALLERY</span>' +
+      '</div>' +
+    '</section>' +
+
   '</div>';
 }
 
@@ -261,7 +334,7 @@ function servicesPage() {
       '<div class="lash-grid">' + lashes + '</div>' +
     '</section>' +
     (d.policies
-      ? '<section class="policies"><p class="eyebrow">GOOD TO KNOW</p><p>' + esc(d.policies) + '</p></section>'
+      ? '<section class="policies" id="policies"><p class="eyebrow">GOOD TO KNOW</p><p>' + esc(d.policies) + '</p></section>'
       : '') +
     '<div class="tail-cta"><span class="btn" data-act="go:booking">BOOK A SERVICE</span></div>' +
   '</div>';
@@ -272,7 +345,7 @@ function artistPage() {
 
   var work = '';
   if (d.gallery.length) {
-    work = '<section class="work">' +
+    work = '<section class="work" id="work">' +
       '<p class="eyebrow">SELECTED WORK</p>' +
       '<div class="work-grid">' +
         d.gallery.map(function (u) { return '<div class="work-tile frame">' + photo(u, '') + '</div>'; }).join('') +
@@ -462,7 +535,7 @@ function contactPage() {
           '<span class="info-val">' + esc(d.brand.email || 'Email to be added') + '</span></div>' +
         '<div class="info"><span class="info-label">STUDIO</span>' +
           '<span class="info-val addr">' + esc(d.brand.address || 'Address to be added') + '</span></div>' +
-        '<div class="info"><span class="info-label">STUDIO HOURS</span>' + hours + '</div>' +
+        '<div class="info" id="hours"><span class="info-label">STUDIO HOURS</span>' + hours + '</div>' +
       '</div>' +
     '</section>' +
   '</div>';
@@ -472,27 +545,31 @@ function footer() {
   var d = state.data;
   return '' +
   '<footer class="footer">' +
-    '<div class="foot-col brand-col">' +
-      '<span class="foot-name">ROSÉ</span>' +
-      '<span class="foot-sub">CREATIVE ARTISTRY</span>' +
-      '<p class="foot-place">St Kitts · by appointment</p>' +
-    '</div>' +
-    '<div class="foot-col">' +
-      '<span class="foot-label">PAGES</span>' +
-      '<span class="foot-link" data-act="go:services">Services</span>' +
-      '<span class="foot-link" data-act="go:artist">The Artist</span>' +
-      '<span class="foot-link" data-act="go:reviews">Reviews</span>' +
-      '<span class="foot-link" data-act="go:booking">Booking</span>' +
-      '<span class="foot-link" data-act="go:contact">Contact</span>' +
-    '</div>' +
-    '<div class="foot-col">' +
-      '<span class="foot-label">ELSEWHERE</span>' +
-      '<span class="foot-link">' + esc(d.brand.ig || 'Instagram to be added') + '</span>' +
-      '<span class="foot-link">' + esc(d.brand.email || 'Email to be added') + '</span>' +
-    '</div>' +
-    '<div class="foot-col">' +
-      '<span class="foot-label">STUDIO</span>' +
-      '<span class="foot-link gold" data-act="go:admin">Studio login →</span>' +
+    '<div class="footer-inner">' +
+      '<div class="foot-col brand-col">' +
+        '<span class="foot-name">ROSÉ</span>' +
+        '<span class="foot-sub">CREATIVE ARTISTRY</span>' +
+        '<span class="foot-ig">' + esc(d.brand.ig || 'Instagram to be added') + '</span>' +
+        (d.brand.email ? '<span class="foot-place">' + esc(d.brand.email) + '</span>' : '') +
+        '<span class="foot-place">St Kitts · by appointment</span>' +
+      '</div>' +
+      '<div class="foot-col">' +
+        '<span class="foot-label">PAGES</span>' +
+        '<span class="foot-link" data-act="go:services">Services</span>' +
+        '<span class="foot-link" data-act="go:artist">The Artist</span>' +
+        '<span class="foot-link" data-act="go:reviews">Reviews</span>' +
+        '<span class="foot-link" data-act="go:booking">Booking</span>' +
+        '<span class="foot-link" data-act="go:contact">Contact</span>' +
+      '</div>' +
+      '<div class="foot-col">' +
+        '<span class="foot-label">GOOD TO KNOW</span>' +
+        '<span class="foot-link" data-act="go:services#policies">Policies</span>' +
+        '<span class="foot-link" data-act="go:contact#hours">Opening hours</span>' +
+      '</div>' +
+      '<div class="foot-col">' +
+        '<span class="foot-label">STUDIO</span>' +
+        '<span class="foot-link gold" data-act="go:admin">Studio login →</span>' +
+      '</div>' +
     '</div>' +
   '</footer>' +
   '<div class="copyright"><p>© 2026 ROSÉ Creative Artistry</p></div>';
@@ -696,16 +773,18 @@ function panelPages() {
     '<div class="pages-grid">' +
       '<div class="pages-col">' +
         '<p class="eyebrow">HOMEPAGE</p>' +
-        '<div class="field"><span class="field-label">Headline</span>' +
-          '<input type="text" value="' + esc(d.home.headline) + '" data-k="home.headline"></div>' +
-        '<div class="field"><span class="field-label">Sub-headline</span>' +
+        '<div class="field"><span class="field-label">Script line above the headline</span>' +
+          '<input type="text" value="' + esc(d.home.script) + '" data-k="home.script" placeholder="Enhancing your"></div>' +
+        '<div class="field"><span class="field-label">Headline (shown in capitals)</span>' +
+          '<input type="text" value="' + esc(d.home.headline) + '" data-k="home.headline" placeholder="Natural Beauty"></div>' +
+        '<div class="field"><span class="field-label">About paragraph</span>' +
           '<textarea rows="3" data-k="home.sub">' + esc(d.home.sub) + '</textarea></div>' +
-        '<div class="field"><span class="field-label">Welcome paragraph</span>' +
-          '<textarea rows="6" data-k="home.welcome" placeholder="A few lines about the studio">' + esc(d.home.welcome) + '</textarea></div>' +
-        '<div class="field"><span class="field-label">Hero image</span>' +
+        '<div class="field"><span class="field-label">Second about paragraph (optional)</span>' +
+          '<textarea rows="5" data-k="home.welcome" placeholder="A few more lines about the studio">' + esc(d.home.welcome) + '</textarea></div>' +
+        '<div class="field"><span class="field-label">Hero portrait — a cut-out photo works best</span>' +
           '<div class="a-img-lg frame">' + photo(d.home.heroImg, 'NO PHOTO') + '</div>' +
           '<label class="upload">UPLOAD<input type="file" accept="image/*" data-upload="home.heroImg"></label></div>' +
-        '<div class="field"><span class="field-label">Closing image</span>' +
+        '<div class="field"><span class="field-label">Book-with-us cut-out</span>' +
           '<div class="a-img-xs frame">' + photo(d.home.ctaImg, 'NO PHOTO') + '</div>' +
           '<label class="upload">UPLOAD<input type="file" accept="image/*" data-upload="home.ctaImg"></label></div>' +
       '</div>' +
@@ -714,6 +793,8 @@ function panelPages() {
         '<div class="field"><span class="field-label">Portrait</span>' +
           '<div class="a-img-md frame">' + photo(d.artist.portrait, 'NO PHOTO') + '</div>' +
           '<label class="upload">UPLOAD<input type="file" accept="image/*" data-upload="artist.portrait"></label></div>' +
+        '<div class="field"><span class="field-label">One line about you (shown on the homepage)</span>' +
+          '<input type="text" value="' + esc(d.artist.intro) + '" data-k="artist.intro" placeholder="Bridal, event and editorial makeup in St Kitts"></div>' +
         '<div class="field"><span class="field-label">Your story</span>' +
           '<textarea rows="7" data-k="artist.story" placeholder="Tell them who you are">' + esc(d.artist.story) + '</textarea></div>' +
         '<div class="field"><span class="field-label">How you work</span>' +
@@ -849,7 +930,7 @@ function render() {
    ========================================================================= */
 
 var actions = {
-  go:      function (p) { go(p); },
+  go:      function (p) { var h = p.split('#'); go(h[0], h[1]); },
   sec:     function (s) { goSection(s); },
   signIn:  function () { state.logged = true; render(); window.scrollTo(0, 0); },
   signOut: function () { state.logged = false; state.page = 'home'; render(); window.scrollTo(0, 0); },
