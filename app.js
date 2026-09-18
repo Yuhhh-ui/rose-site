@@ -37,6 +37,7 @@ var state = {
   loginError: '',      // shown on the login page
   saveNote: '',        // "Saving…" / "Saved" in the panel header
   storageError: '',    // set when the server has no storage connected yet
+  inboxAt: 0,          // when bookings, reviews and messages were last fetched
   notifyTest: null,    // result of Settings → Send a test alert
   lastBooking: null    // the booking just sent, for the WhatsApp link on the confirmation
 };
@@ -114,15 +115,46 @@ function setSaveNote(text) {
 }
 
 /* bookings, reviews and messages for the panel */
-function loadInbox() {
+/* Panel sections that show things clients sent in, so they go stale on their own. */
+var INBOX_SECTIONS = { bookings: 1, reviews: 1, messages: 1, clients: 1 };
+var inboxTimer = null;
+var inboxBusy = false;
+
+/* quiet: a background check, so a hiccup does not throw an error on screen */
+function loadInbox(quiet) {
+  if (inboxBusy) return Promise.resolve();
+  inboxBusy = true;
   return Promise.all([API.get('/api/bookings'), API.get('/api/reviews'), API.get('/api/messages')])
     .then(function (r) {
       state.data.bookings = r[0].items;
       state.data.reviews  = r[1].items;
       state.data.messages = r[2].items;
+      state.inboxAt = Date.now();
       render();
     })
-    .catch(function (e) { flash('inbox-error:' + e.message); });
+    .catch(function (e) { if (!quiet) flash('inbox-error:' + e.message); })
+    .then(function () { inboxBusy = false; });
+}
+
+/* While an inbox section is open, look for new bookings without being asked.
+   Content sections are left alone so a check never interrupts typing. */
+function watchInbox() {
+  clearInterval(inboxTimer);
+  inboxTimer = null;
+  if (!API.remote || !state.logged || state.page !== 'admin') return;
+  if (!INBOX_SECTIONS[state.section]) return;
+  inboxTimer = setInterval(function () {
+    if (document.visibilityState === 'visible') loadInbox(true);
+  }, 45000);
+}
+
+function ago(t) {
+  if (!t) return 'not yet';
+  var s = Math.round((Date.now() - t) / 1000);
+  if (s < 10) return 'just now';
+  if (s < 60) return s + ' seconds ago';
+  var m = Math.round(s / 60);
+  return m <= 1 ? 'a minute ago' : m + ' minutes ago';
 }
 
 /* first load */
@@ -146,7 +178,7 @@ function boot() {
         })
         .then(function () {
           render();
-          if (state.logged) loadInbox();
+          if (state.logged) { loadInbox(); watchInbox(); }
         });
     })
     .catch(function () {
@@ -215,6 +247,9 @@ function go(page, anchor) {
   state.page = page;
   state.flash = '';
   render();
+  /* opening the panel should show what has come in since the page loaded */
+  if (page === 'admin' && state.logged && API.remote) loadInbox(true);
+  watchInbox();
   var el = anchor ? document.getElementById(anchor) : null;
   if (el) el.scrollIntoView(); else window.scrollTo(0, 0);
 }
@@ -222,7 +257,10 @@ function go(page, anchor) {
 function goSection(sec) {
   state.section = sec;
   state.flash = '';
+  state.saveNote = '';
   render();
+  if (API.remote && state.logged && INBOX_SECTIONS[sec]) loadInbox(true);
+  watchInbox();
   window.scrollTo(0, 0);
 }
 
@@ -892,7 +930,10 @@ function panel() {
     '<div class="main">' +
       '<div class="main-head">' +
         '<h1>' + esc(SECTIONS[state.section] || 'Bookings') + '</h1>' +
-        '<span class="main-note">' + esc(state.saveNote || 'Changes save as you type and show on the website straight away') + '</span>' +
+        (INBOX_SECTIONS[state.section] && API.remote
+          ? '<span class="main-note">Checked ' + esc(ago(state.inboxAt)) + '. New bookings appear on their own.</span>' +
+            '<span class="refresh-link" data-act="refreshInbox">REFRESH NOW</span>'
+          : '<span class="main-note">' + esc(state.saveNote || 'Changes save as you type and show on the website straight away') + '</span>') +
       '</div>' +
       (state.storageError ? '<p class="err panel-err">Nothing can be saved yet: ' + esc(state.storageError) + ' See Settings → Connections.</p>' : '') +
       (flashText('inbox-error') ? '<p class="err panel-err">' + esc(flashText('inbox-error')) + '</p>' : '') +
@@ -1308,10 +1349,12 @@ var actions = {
         state.logged = true; state.setup = r.setup || null; state.flash = '';
         render(); window.scrollTo(0, 0);
         loadInbox();
+        watchInbox();
       })
       .catch(function (e) { state.loginError = e.message; state.flash = ''; render(); });
   },
   signOut: function () {
+    clearInterval(inboxTimer); inboxTimer = null;
     if (API.remote) API.del('/api/session').catch(function () {});
     state.logged = false; state.page = 'home';
     state.data.bookings = []; state.data.messages = [];
@@ -1408,6 +1451,8 @@ var actions = {
     inbox('messages', 'DELETE', { id: m.id }, function () { state.data.messages.splice(Number(i), 1); });
   },
 
+  refreshInbox: function () { loadInbox(); },
+
   /* panel — settings */
   testAlert: function () {
     state.notifyTest = 'sending';
@@ -1449,6 +1494,14 @@ app.addEventListener('click', function (e) {
   var name = c < 0 ? raw : raw.slice(0, c);
   var arg  = c < 0 ? '' : raw.slice(c + 1);
   if (actions[name]) actions[name](arg, el);
+});
+
+/* Coming back to the tab is a good moment to check for anything new. */
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible' && API.remote && state.logged &&
+      state.page === 'admin' && INBOX_SECTIONS[state.section]) {
+    loadInbox(true);
+  }
 });
 
 app.addEventListener('keydown', function (e) {

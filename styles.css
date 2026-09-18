@@ -660,6 +660,12 @@ textarea { resize: vertical; line-height: 1.7; }
 .a-toggle { cursor: pointer; font-size: 9.5px; letter-spacing: .16em; color: var(--gold); }
 
 .panel-err { padding: 0 40px 12px; }
+.refresh-link {
+  cursor: pointer; margin-left: 16px; font-size: 9px; font-weight: 400; letter-spacing: .20em;
+  color: var(--gold); border-bottom: 1px solid rgba(201, 164, 124, .4); padding-bottom: 3px;
+  transition: color .2s ease;
+}
+.refresh-link:hover { color: var(--cream); }
 .btn-wa {
   display: inline-block; margin-top: 14px; padding: 14px 28px;
   background: #25D366; color: #0B0A09;
