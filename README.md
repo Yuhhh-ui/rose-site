@@ -175,8 +175,17 @@ messages only send inside 24 hours of your last message to it. Sending the
 join phrase again fixes both. To remove that limit, apply for a WhatsApp
 sender in Twilio and use an approved template.
 
+### The booking calendar
+
+Dates are held as `YYYY-MM-DD`, so a choice keeps its month. The arrows move
+between months, today is the earliest date that can be picked, and
+`MONTHS_AHEAD` in `app.js` caps how far forward bookings open (six months).
+Past days render dimmed with no click handler. The week starts on Monday to
+match `DAYS` in `content.js`. A booking carries both a readable `date`
+("5 October 2026") and a sortable `dateISO`.
+
 ## Not built yet
 
-- a live calendar that blocks dates already taken
+- blocking dates and times that are already taken
 - payments / deposits
 - a note back to the client when a booking is confirmed

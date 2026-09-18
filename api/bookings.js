@@ -26,6 +26,7 @@ export default async function handler(req, res) {
         notes:    clean(b.notes, 2000),
         service:  clean(b.service, 120),
         date:     clean(b.date, 60),
+        dateISO:  /^\d{4}-\d{2}-\d{2}$/.test(String(b.dateISO || '')) ? String(b.dateISO) : '',
         time:     clean(b.time, 40),
         place:    clean(b.place, 60) || 'Studio'
       };

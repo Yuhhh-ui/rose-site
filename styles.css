@@ -515,15 +515,36 @@ textarea { resize: vertical; line-height: 1.7; }
 .tick { color: var(--gold); font-size: 14px; }
 
 .step-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 48px; padding: 56px var(--gutter); border-bottom: 1px solid var(--line); }
-.month { margin: 0 0 14px; font-size: 11px; font-weight: 200; color: var(--dim); }
+.cal-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.cal-label { font-size: 12px; font-weight: 300; letter-spacing: .10em; color: var(--cream); }
+.cal-nav {
+  cursor: pointer; width: 30px; height: 30px; display: grid; place-items: center;
+  border: 1px solid var(--line-2); color: var(--mute); font-size: 15px; line-height: 1;
+  transition: border-color .28s ease, color .28s ease;
+}
+.cal-nav:hover { border-color: var(--gold); color: var(--gold); }
+.cal-nav.off { opacity: .22; cursor: default; }
+.cal-nav.off:hover { border-color: var(--line-2); color: var(--mute); }
+
 .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.cal-head {
+  display: grid; place-items: center; padding-bottom: 4px;
+  font-size: 8px; font-weight: 300; letter-spacing: .14em; color: var(--dim); text-transform: uppercase;
+}
+.cal-blank { aspect-ratio: 1; }
 .cal-day {
   cursor: pointer; display: grid; place-items: center; aspect-ratio: 1;
   border: 1px solid var(--line-2); font-size: 12px; font-weight: 200; color: var(--mute);
   transition: border-color .28s ease, color .28s ease;
 }
 .cal-day:hover { border-color: var(--gold); color: var(--cream); }
+.cal-day.today { border-color: var(--gold-line); color: var(--cream); }
 .cal-day.sel { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+.cal-day.past { opacity: .2; cursor: default; }
+.cal-day.past:hover { border-color: var(--line-2); color: var(--mute); }
+
+.cal-chosen { margin: 14px 0 0; font-size: 11px; font-weight: 300; letter-spacing: .06em; color: var(--gold); }
+.cal-chosen.dim { color: var(--dim); }
 
 .slots { display: flex; flex-direction: column; gap: 10px; }
 .slot {

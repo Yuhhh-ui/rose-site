@@ -37,6 +37,7 @@ var state = {
   loginError: '',      // shown on the login page
   saveNote: '',        // "Saving…" / "Saved" in the panel header
   storageError: '',    // set when the server has no storage connected yet
+  calOffset: 0,        // months ahead of this one shown on the booking calendar
   booked: null,        // the request just sent, shown as a confirmation
   sending: false,      // a booking is on its way to the server
   inboxAt: 0,          // when bookings, reviews and messages were last fetched
@@ -80,6 +81,8 @@ function restoreForms() {
     var raw = localStorage.getItem(FORMS_KEY);
     if (raw) applySaved(JSON.parse(raw));
   } catch (e) {}
+  /* dates used to be stored as a bare day number; ignore anything that old */
+  if (state.data.form && !isIso(state.data.form.date)) state.data.form.date = '';
 }
 
 function pick(keys) {
@@ -222,12 +225,89 @@ function setPath(path, val) {
   if (FORM_KEYS.indexOf(ks[0]) >= 0) saveForms(); else save();
 }
 
-function monthMeta() {
-  var now = new Date();
+/* --- the booking calendar ------------------------------------------------
+   Dates are held as 'YYYY-MM-DD' so a choice keeps its month. Clients can
+   look ahead but never behind: today is the earliest date, and MONTHS_AHEAD
+   caps how far forward the arrows go. */
+
+var MONTHS_AHEAD = 6;
+
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+function isoDate(y, m, d) { return y + '-' + pad2(m + 1) + '-' + pad2(d); }
+
+function isIso(v) { return /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')); }
+
+/* midnight today, so "is this in the past" ignores the time of day */
+function todayStart() {
+  var n = new Date();
+  return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+}
+
+function isoToDate(iso) {
+  var p = String(iso).split('-');
+  return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+}
+
+/* '2026-10-05' -> '5 October 2026' */
+function prettyDate(iso) {
+  if (!isIso(iso)) return '';
+  var p = String(iso).split('-');
+  return Number(p[2]) + ' ' + MONTHS[Number(p[1]) - 1] + ' ' + p[0];
+}
+
+/* the month on screen, as an offset in months from this one */
+function calMonth() {
+  var off = Math.min(Math.max(state.calOffset || 0, 0), MONTHS_AHEAD);
+  var n = new Date();
+  var first = new Date(n.getFullYear(), n.getMonth() + off, 1);
   return {
-    label: MONTHS[now.getMonth()] + ' ' + now.getFullYear(),
-    days: new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+    y: first.getFullYear(),
+    m: first.getMonth(),
+    offset: off,
+    label: MONTHS[first.getMonth()] + ' ' + first.getFullYear(),
+    days: new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate(),
+    /* DAYS starts on Monday, so shift Sunday-first getDay() to match */
+    lead: (first.getDay() + 6) % 7
   };
+}
+
+function calendar() {
+  var c = calMonth(), today = todayStart(), chosen = state.data.form.date;
+
+  var out = DAYS.map(function (day) {
+    return '<span class="cal-head">' + esc(day.slice(0, 3)) + '</span>';
+  }).join('');
+
+  for (var i = 0; i < c.lead; i++) out += '<span class="cal-blank"></span>';
+
+  for (var d = 1; d <= c.days; d++) {
+    var iso = isoDate(c.y, c.m, d);
+    var day = new Date(c.y, c.m, d);
+    var past = day < today;
+    var cls = 'cal-day' +
+      (past ? ' past' : '') +
+      (day.getTime() === today.getTime() ? ' today' : '') +
+      (chosen === iso ? ' sel' : '');
+    out += past
+      ? '<span class="' + cls + '" aria-disabled="true">' + d + '</span>'
+      : '<span class="' + cls + '" data-act="day:' + iso + '">' + d + '</span>';
+  }
+
+  var back = c.offset > 0
+    ? '<span class="cal-nav" data-act="month:-1" title="Previous month">‹</span>'
+    : '<span class="cal-nav off" title="This is the earliest month">‹</span>';
+  var fwd = c.offset < MONTHS_AHEAD
+    ? '<span class="cal-nav" data-act="month:1" title="Next month">›</span>'
+    : '<span class="cal-nav off" title="Bookings open ' + MONTHS_AHEAD + ' months ahead">›</span>';
+
+  return '<div class="cal-top">' + back +
+      '<span class="cal-label">' + esc(c.label) + '</span>' + fwd +
+    '</div>' +
+    '<div class="cal">' + out + '</div>' +
+    (isIso(chosen)
+      ? '<p class="cal-chosen">Chosen: ' + esc(prettyDate(chosen)) + '</p>'
+      : '<p class="cal-chosen dim">No date chosen yet</p>');
 }
 
 function flash(msg) {
@@ -731,7 +811,7 @@ function bookingDone() {
 
 function bookingPage() {
   if (state.booked) return bookingDone();
-  var d = state.data, mm = monthMeta();
+  var d = state.data;
 
   var picks = liveServices().map(function (x) {
     var s = x.s, sel = d.form.svc === s.name;
@@ -743,11 +823,6 @@ function bookingPage() {
       '<span class="pick-meta">' + esc(money(s.price)) + ' · ' + esc(s.dur) + '</span>' +
     '</div>';
   }).join('');
-
-  var days = '';
-  for (var i = 1; i <= mm.days; i++) {
-    days += '<span class="cal-day' + (d.form.date === String(i) ? ' sel' : '') + '" data-act="day:' + i + '">' + i + '</span>';
-  }
 
   var slots = TIME_SLOTS.map(function (t) {
     return '<div class="slot" data-act="slot:' + esc(t) + '">' +
@@ -770,8 +845,7 @@ function bookingPage() {
     '<section class="step-cols">' +
       '<div>' +
         '<div class="step-head"><span class="step-num">STEP 02</span><h2 class="step-title">Pick a date</h2></div>' +
-        '<p class="month">' + esc(mm.label) + '</p>' +
-        '<div class="cal">' + days + '</div>' +
+        calendar() +
       '</div>' +
       '<div>' +
         '<p class="eyebrow" style="margin-bottom:20px">TIME</p>' +
@@ -806,7 +880,7 @@ function bookingPage() {
       '</div>' +
       '<div class="summary">' +
         '<div class="sum-row"><span>Service</span><span>' + esc(d.form.svc || '—') + '</span></div>' +
-        '<div class="sum-row"><span>Date</span><span>' + esc(d.form.date ? d.form.date + ' ' + mm.label : '—') + '</span></div>' +
+        '<div class="sum-row"><span>Date</span><span>' + esc(prettyDate(d.form.date) || '—') + '</span></div>' +
         '<div class="sum-row"><span>Time</span><span>' + esc(d.form.time || '—') + '</span></div>' +
         '<div class="sum-row"><span>Location</span><span>' + esc(d.form.place || '—') + '</span></div>' +
         '<div class="rule"></div>' +
@@ -814,6 +888,8 @@ function bookingPage() {
           (state.sending ? 'SENDING…' : 'REQUEST THIS APPOINTMENT') + '</span>' +
         (state.flash === 'booking-error'
           ? '<p class="err">Add your name, a service, a date and a time first.</p>' : '') +
+        (state.flash === 'booking-past'
+          ? '<p class="err">That date has already passed. Please pick another.</p>' : '') +
         (flashText('send-error') ? '<p class="err">Could not send: ' + esc(flashText('send-error')) + '</p>' : '') +
       '</div>' +
     '</section>' +
@@ -1432,18 +1508,23 @@ var actions = {
     window.scrollTo(0, 0);
   },
   pick:  function (i) { setPath('form.svc', state.data.services[i].name); render(); },
-  day:   function (n) { setPath('form.date', String(n)); render(); },
+  day:   function (iso) { setPath('form.date', iso); render(); },
+  month: function (step) {
+    state.calOffset = Math.min(Math.max((state.calOffset || 0) + Number(step), 0), MONTHS_AHEAD);
+    render();
+  },
   slot:  function (t) { setPath('form.time', t); render(); },
   place: function (p) { setPath('form.place', p); render(); },
 
   sendBooking: function () {
     var f = state.data.form;
-    if (!f.name || !f.svc || !f.date || !f.time) { flash('booking-error'); return; }
+    if (!f.name || !f.svc || !isIso(f.date) || !f.time) { flash('booking-error'); return; }
+    if (isoToDate(f.date) < todayStart()) { flash('booking-past'); return; }
     var item = {
       id: 'b' + Date.now(), at: Date.now(),
       name: f.name, contact: f.contact, email: f.email,
       occasion: f.occasion, notes: f.notes, service: f.svc,
-      date: f.date + ' ' + monthMeta().label, time: f.time,
+      date: prettyDate(f.date), dateISO: f.date, time: f.time,
       place: f.place || 'Studio', status: 'pending'
     };
     if (state.sending) return;
