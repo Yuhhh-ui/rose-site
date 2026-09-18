@@ -37,6 +37,8 @@ var state = {
   loginError: '',      // shown on the login page
   saveNote: '',        // "Saving…" / "Saved" in the panel header
   storageError: '',    // set when the server has no storage connected yet
+  booked: null,        // the request just sent, shown as a confirmation
+  sending: false,      // a booking is on its way to the server
   inboxAt: 0,          // when bookings, reviews and messages were last fetched
   notifyTest: null,    // result of Settings → Send a test alert
   lastBooking: null    // the booking just sent, for the WhatsApp link on the confirmation
@@ -244,6 +246,7 @@ function flashText(prefix) {
 
 /* go('services', 'policies') opens the page and scrolls to the element with that id */
 function go(page, anchor) {
+  if (page !== 'booking') state.booked = null;
   state.page = page;
   state.flash = '';
   render();
@@ -611,7 +614,7 @@ function artistPage() {
 function whatsappBookingLink() {
   var num = String(state.data.brand.whatsapp || '').replace(/[^\d]/g, '');
   if (!num) return '';
-  var f = state.lastBooking;
+  var f = state.booked;
   if (!f) return '';
   var lines = [
     'Hi! I just requested an appointment on your website.',
@@ -696,7 +699,38 @@ function reviewsPage() {
   '</div>';
 }
 
+/* Shown in place of the form once a request has gone through, so there is no
+   doubt about whether it was sent. */
+function bookingDone() {
+  var b = state.booked, wa = whatsappBookingLink();
+  return '<div class="page">' +
+    '<section class="done">' +
+      '<div class="done-mark">' +
+        '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#C9A47C" stroke-width="1.2">' +
+          '<path d="m4 12.5 5.5 5.5L20 7"/></svg>' +
+      '</div>' +
+      '<span class="script">Thank you</span>' +
+      '<h1 class="done-title">Your request is in.</h1>' +
+      '<p class="done-copy">It is with the studio now. You will hear back to confirm' +
+        (b.contact ? ' on ' + esc(b.contact) : '') + '.</p>' +
+      '<div class="done-card">' +
+        '<div class="sum-row"><span>Name</span><span>' + esc(b.name) + '</span></div>' +
+        '<div class="sum-row"><span>Service</span><span>' + esc(b.service) + '</span></div>' +
+        '<div class="sum-row"><span>Date</span><span>' + esc(b.date) + '</span></div>' +
+        '<div class="sum-row"><span>Time</span><span>' + esc(b.time) + '</span></div>' +
+        '<div class="sum-row"><span>Location</span><span>' + esc(b.place) + '</span></div>' +
+      '</div>' +
+      (wa ? '<a class="btn-wa" href="' + esc(wa) + '" target="_blank" rel="noopener">MESSAGE IT ON WHATSAPP TOO</a>' : '') +
+      '<div class="done-links">' +
+        '<span class="btn-line" data-act="bookAnother">BOOK ANOTHER</span>' +
+        '<span class="btn-line" data-act="go:home">BACK TO THE SITE</span>' +
+      '</div>' +
+    '</section>' +
+  '</div>';
+}
+
 function bookingPage() {
+  if (state.booked) return bookingDone();
   var d = state.data, mm = monthMeta();
 
   var picks = liveServices().map(function (x) {
@@ -776,14 +810,8 @@ function bookingPage() {
         '<div class="sum-row"><span>Time</span><span>' + esc(d.form.time || '—') + '</span></div>' +
         '<div class="sum-row"><span>Location</span><span>' + esc(d.form.place || '—') + '</span></div>' +
         '<div class="rule"></div>' +
-        '<span class="btn-confirm" data-act="sendBooking">REQUEST THIS APPOINTMENT</span>' +
-        (state.flash === 'booking-sent'
-          ? '<p class="ok">Sent. Your request is with the studio — you will hear back to confirm.</p>' +
-            (whatsappBookingLink()
-              ? '<a class="btn-wa" href="' + esc(whatsappBookingLink()) + '" target="_blank" rel="noopener">MESSAGE IT ON WHATSAPP TOO</a>'
-              : '')
-          : '') +
-        (state.flash === 'sending' ? '<p class="form-note">Sending…</p>' : '') +
+        '<span class="btn-confirm' + (state.sending ? ' busy' : '') + '" data-act="sendBooking">' +
+          (state.sending ? 'SENDING…' : 'REQUEST THIS APPOINTMENT') + '</span>' +
         (state.flash === 'booking-error'
           ? '<p class="err">Add your name, a service, a date and a time first.</p>' : '') +
         (flashText('send-error') ? '<p class="err">Could not send: ' + esc(flashText('send-error')) + '</p>' : '') +
@@ -1281,6 +1309,11 @@ function panelSettings() {
    RENDER
    ========================================================================= */
 
+var lastView = null;
+
+/* Call before render() when a change deserves the page transition again. */
+function animateNext() { lastView = null; }
+
 function render() {
   var inAdmin = state.page === 'admin';
   var html = '';
@@ -1302,7 +1335,19 @@ function render() {
   var active = document.activeElement, key = active && (active.getAttribute('data-k') || active.id), pos = null;
   if (key && typeof active.selectionStart === 'number') pos = [active.selectionStart, active.selectionEnd];
 
-  document.getElementById('app').innerHTML = html;
+  /* Picking a date or a time re-renders the same page. Replaying the entry
+     animation there makes every click look like a page reload, so the
+     transition only runs when the view actually changes — and the scroll
+     position is put back, since replacing the markup can reset it. */
+  var view = state.page + '|' + (inAdmin ? (state.logged ? state.section : 'login') : '');
+  var sameView = (view === lastView);
+  var y = window.scrollY;
+  var appEl = document.getElementById('app');
+
+  appEl.classList.toggle('still', sameView);
+  appEl.innerHTML = html;
+  lastView = view;
+  if (sameView && window.scrollY !== y) window.scrollTo(0, y);
 
   if (key) {
     var again = document.querySelector('[data-k="' + key + '"]') || document.getElementById(key);
@@ -1323,6 +1368,17 @@ function inbox(kind, method, payload, apply) {
   API.call(method, '/api/' + kind, payload)
     .then(function () { apply(); render(); })
     .catch(function (e) { flash('inbox-error:' + e.message); });
+}
+
+/* A booking went through: clear the form completely and show the confirmation. */
+function finishBooking(item) {
+  state.booked = item;
+  state.data.form = { name: '', contact: '', email: '', occasion: '', notes: '', svc: '', date: '', time: '', place: '' };
+  saveForms();
+  state.flash = '';
+  animateNext();
+  render();
+  window.scrollTo(0, 0);
 }
 
 /* a public form: send it to the server, or keep it here on a local copy */
@@ -1364,8 +1420,16 @@ var actions = {
 
   /* booking flow */
   book: function (i) {
+    state.booked = null;
     setPath('form.svc', state.data.services[i].name);
     go('booking');
+  },
+
+  bookAnother: function () {
+    state.booked = null;
+    animateNext();
+    render();
+    window.scrollTo(0, 0);
   },
   pick:  function (i) { setPath('form.svc', state.data.services[i].name); render(); },
   day:   function (n) { setPath('form.date', String(n)); render(); },
@@ -1382,10 +1446,12 @@ var actions = {
       date: f.date + ' ' + monthMeta().label, time: f.time,
       place: f.place || 'Studio', status: 'pending'
     };
-    state.lastBooking = item;
-    submit('/api/bookings', item, function () { state.data.bookings.unshift(item); }, 'booking-sent');
-    f.name = ''; f.contact = ''; f.email = ''; f.occasion = ''; f.notes = '';
-    saveForms();
+    if (state.sending) return;
+    if (!API.remote) { state.data.bookings.unshift(item); save(); finishBooking(item); return; }
+    state.sending = true; state.flash = ''; render();
+    API.post('/api/bookings', item)
+      .then(function () { state.sending = false; finishBooking(item); })
+      .catch(function (e) { state.sending = false; flash('send-error:' + e.message); });
   },
 
   sendReview: function () {
