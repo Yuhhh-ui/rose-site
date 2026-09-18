@@ -37,6 +37,7 @@ var state = {
   loginError: '',      // shown on the login page
   saveNote: '',        // "Saving…" / "Saved" in the panel header
   storageError: '',    // set when the server has no storage connected yet
+  gal: { filter: 'All', open: false, i: 0 },   // gallery filter and lightbox
   calOffset: 0,        // months ahead of this one shown on the booking calendar
   booked: null,        // the request just sent, shown as a confirmation
   sending: false,      // a booking is on its way to the server
@@ -67,6 +68,7 @@ function applySaved(saved) {
   ['home', 'artist', 'brand'].forEach(function (k) {
     if (saved[k]) state.data[k] = Object.assign(blank()[k], saved[k]);
   });
+  normaliseGallery();
 }
 
 function loadLocal() {
@@ -83,6 +85,15 @@ function restoreForms() {
   } catch (e) {}
   /* dates used to be stored as a bare day number; ignore anything that old */
   if (state.data.form && !isIso(state.data.form.date)) state.data.form.date = '';
+}
+
+/* Photos used to be plain URL strings and are now { url, tag }.
+   Anything saved in the old shape is lifted on load so nothing is lost. */
+function normaliseGallery() {
+  if (!Array.isArray(state.data.gallery)) { state.data.gallery = []; return; }
+  state.data.gallery = state.data.gallery.map(function (g) {
+    return typeof g === 'string' ? { url: g, tag: '' } : { url: (g && g.url) || '', tag: (g && g.tag) || '' };
+  }).filter(function (g) { return g.url; });
 }
 
 function pick(keys) {
@@ -327,6 +338,7 @@ function flashText(prefix) {
 /* go('services', 'policies') opens the page and scrolls to the element with that id */
 function go(page, anchor) {
   if (page !== 'booking') state.booked = null;
+  if (page !== 'gallery') state.gal.open = false;
   state.page = page;
   state.flash = '';
   render();
@@ -376,6 +388,7 @@ function nav() {
     '<nav class="nav-links">' +
       link('home', 'HOME') +
       link('services', 'SERVICES') +
+      link('gallery', 'GALLERY') +
       link('artist', 'THE ARTIST') +
       link('reviews', 'REVIEWS') +
       link('contact', 'CONTACT') +
@@ -390,7 +403,7 @@ var QUICK_LINKS = [
     icon: '<circle cx="12" cy="8" r="4"/><path d="M4.5 21c0-4.1 3.4-7 7.5-7s7.5 2.9 7.5 7"/>' },
   { to: 'services',     label: 'SERVICES',
     icon: '<path d="M15 3.5 8 15"/><path d="M18.5 5.5 11.5 17"/><path d="M15 3.5a2 2 0 0 1 3.5 2"/><path d="M8 15c-2 1-2.5 4-2.5 5.5C7 20 10 19.5 11.5 17"/>' },
-  { to: 'artist#work',  label: 'PORTFOLIO',
+  { to: 'gallery',      label: 'PORTFOLIO',
     icon: '<rect x="3.5" y="3.5" width="7" height="7"/><rect x="13.5" y="3.5" width="7" height="7"/><rect x="3.5" y="13.5" width="7" height="7"/><rect x="13.5" y="13.5" width="7" height="7"/>' },
   { to: 'reviews',      label: 'REVIEWS',
     icon: '<path d="m12 3.6 2.5 5.3 5.5.8-4 4.1 1 5.9-5-2.9-5 2.9 1-5.9-4-4.1 5.5-.8Z"/>' },
@@ -428,7 +441,7 @@ function homePage() {
   }).join('');
 
   /* recent work: the gallery, padded out to a full row of three (six when empty) */
-  var tiles = d.gallery.slice(0, 6);
+  var tiles = d.gallery.slice(0, 6).map(function (g) { return g.url; });
   var want = tiles.length ? Math.ceil(tiles.length / 3) * 3 : 6;
   while (tiles.length < want) tiles.push('');
   var gallery = tiles.map(function (u) {
@@ -522,7 +535,7 @@ function homePage() {
       '</div>' +
       '<div class="gallery-grid">' + gallery + '</div>' +
       '<div class="gallery-cta">' +
-        '<span class="btn-ghost" data-act="go:artist#work">SEE THE FULL GALLERY</span>' +
+        '<span class="btn-ghost" data-act="go:gallery">SEE THE FULL GALLERY</span>' +
       '</div>' +
     '</section>' +
 
@@ -610,6 +623,86 @@ function servicesPage() {
   '</div>';
 }
 
+/* Which tags actually have photos, so no filter leads to an empty grid. */
+function galleryTags() {
+  var seen = {}, out = [];
+  state.data.gallery.forEach(function (g) {
+    if (g.tag && !seen[g.tag]) { seen[g.tag] = 1; out.push(g.tag); }
+  });
+  return out;
+}
+
+function galleryShown() {
+  var f = state.gal.filter;
+  if (f === 'All') return state.data.gallery;
+  return state.data.gallery.filter(function (g) { return g.tag === f; });
+}
+
+function galleryPage() {
+  var all = state.data.gallery, shown = galleryShown(), tags = galleryTags();
+
+  if (!all.length) {
+    return '<div class="page gallery">' +
+      '<section class="gal-head">' +
+        '<div class="gal-head-copy">' +
+          '<span class="script">Her work</span>' +
+          '<h1 class="gal-title">Gallery</h1>' +
+        '</div>' +
+      '</section>' +
+      '<section class="gal-empty">' +
+        '<p class="empty-hint">No photographs here yet. They will appear as soon as Rosé adds them.</p>' +
+        '<span class="btn" data-act="go:booking">BOOK AN APPOINTMENT</span>' +
+      '</section>' +
+    '</div>';
+  }
+
+  var chips = ['All'].concat(tags).map(function (t) {
+    return '<span class="gal-chip' + (state.gal.filter === t ? ' on' : '') +
+      '" data-act="galFilter:' + esc(t) + '">' + esc(t.toUpperCase()) + '</span>';
+  }).join('');
+
+  var tiles = shown.map(function (g, i) {
+    return '<div class="gal-tile" data-act="galOpen:' + i + '">' +
+      photo(g.url, 'PHOTO') +
+      (g.tag ? '<span class="gal-tag">' + esc(g.tag.toUpperCase()) + '</span>' : '') +
+    '</div>';
+  }).join('');
+
+  var lightbox = '';
+  if (state.gal.open && shown.length) {
+    var i = ((state.gal.i % shown.length) + shown.length) % shown.length;
+    var cur = shown[i];
+    lightbox =
+    '<div class="lightbox" data-act="galClose">' +
+      '<div class="lb-top">' +
+        '<span class="lb-pos">' + (i + 1) + ' / ' + shown.length + '</span>' +
+        '<span class="lb-close" data-act="galClose">CLOSE ✕</span>' +
+      '</div>' +
+      '<div class="lb-stage">' +
+        '<img class="lb-img" src="' + esc(cur.url) + '" alt="' + esc(cur.tag || 'Photograph') + '">' +
+      '</div>' +
+      '<div class="lb-foot">' +
+        '<span class="lb-nav" data-act="galStep:-1">← PREVIOUS</span>' +
+        '<span class="lb-tag">' + esc((cur.tag || '').toUpperCase()) + '</span>' +
+        '<span class="lb-nav" data-act="galStep:1">NEXT →</span>' +
+      '</div>' +
+    '</div>';
+  }
+
+  return '<div class="page gallery">' +
+    '<section class="gal-head">' +
+      '<div class="gal-head-copy">' +
+        '<span class="script">Her work</span>' +
+        '<h1 class="gal-title">Gallery</h1>' +
+      '</div>' +
+      '<span class="gal-count">' + all.length + (all.length === 1 ? ' PHOTOGRAPH' : ' PHOTOGRAPHS') + '</span>' +
+    '</section>' +
+    (tags.length ? '<div class="gal-filters">' + chips + '</div>' : '') +
+    '<div class="gal-grid">' + tiles + '</div>' +
+    lightbox +
+  '</div>';
+}
+
 function artistPage() {
   var d = state.data, a = d.artist, feat = featuredReview();
   var first = (a.name || 'Rosé').split(' ')[0].toUpperCase();
@@ -622,19 +715,6 @@ function artistPage() {
       '<span class="look-note' + (l.note ? '' : ' empty-hint') + '">' + esc(l.note || 'One line about it.') + '</span>' +
     '</div>';
   }).join('');
-
-  var work = '';
-  if (d.gallery.length) {
-    work = '<section class="work" id="work">' +
-      '<div class="work-head">' +
-        '<h2>Selected work</h2>' +
-        '<span class="eyebrow">' + d.gallery.length + (d.gallery.length === 1 ? ' PHOTO' : ' PHOTOS') + '</span>' +
-      '</div>' +
-      '<div class="work-grid">' +
-        d.gallery.map(function (u) { return '<div class="work-tile frame">' + photo(u, '') + '</div>'; }).join('') +
-      '</div>' +
-    '</section>';
-  }
 
   return '<div class="page artist">' +
 
@@ -678,8 +758,6 @@ function artistPage() {
         : '<p class="kind-quote empty-hint">A client\'s review appears here once one is published from the studio panel.</p><span class="kind-by">— CLIENT NAME</span>') +
       '<span class="link-gold" data-act="go:reviews">ALL REVIEWS →</span>' +
     '</section>' +
-
-    work +
 
     '<section class="artist-tail">' +
       '<h2>I would love to do your makeup.</h2>' +
@@ -948,6 +1026,7 @@ function footer() {
       '<div class="foot-col">' +
         '<span class="foot-label">PAGES</span>' +
         '<span class="foot-link" data-act="go:services">Services</span>' +
+        '<span class="foot-link" data-act="go:gallery">Gallery</span>' +
         '<span class="foot-link" data-act="go:artist">The Artist</span>' +
         '<span class="foot-link" data-act="go:reviews">Reviews</span>' +
         '<span class="foot-link" data-act="go:booking">Booking</span>' +
@@ -1196,9 +1275,14 @@ function panelServices() {
 
 function panelPortfolio() {
   var g = state.data.gallery;
-  var tiles = g.map(function (u, i) {
+  var names = liveServices().map(function (x) { return x.s.name; });
+  var tiles = g.map(function (item, i) {
+    var opts = ['<option value="">No tag</option>'].concat(names.map(function (n) {
+      return '<option value="' + esc(n) + '"' + (item.tag === n ? ' selected' : '') + '>' + esc(n) + '</option>';
+    })).join('');
     return '<div class="gal-admin">' +
-      '<div class="frame">' + photo(u, '') + '</div>' +
+      '<div class="frame">' + photo(item.url, '') + '</div>' +
+      '<select class="gal-tag-pick" data-k="gallery.' + i + '.tag">' + opts + '</select>' +
       '<span class="gal-remove" data-act="galRemove:' + i + '">REMOVE</span>' +
     '</div>';
   }).join('');
@@ -1207,7 +1291,7 @@ function panelPortfolio() {
     '<label class="upload-big">+ ADD PHOTOS<input type="file" accept="image/*" data-upload="gallery"></label>' +
     (g.length
       ? '<div class="gal-admin-grid">' + tiles + '</div>'
-      : empty('No photos yet', 'Anything you add here appears in the portfolio on the homepage and the artist page.')) +
+      : empty('No photos yet', 'Anything you add here appears on the gallery page and in the portfolio strip on the homepage. Tag a photo with a service and visitors can filter by it.')) +
   '</div>';
 }
 
@@ -1444,6 +1528,7 @@ function render() {
     html += nav();
     if (state.page === 'home')     html += homePage();
     if (state.page === 'services') html += servicesPage();
+    if (state.page === 'gallery')  html += galleryPage();
     if (state.page === 'artist')   html += artistPage();
     if (state.page === 'reviews')  html += reviewsPage();
     if (state.page === 'booking')  html += bookingPage();
@@ -1642,6 +1727,16 @@ var actions = {
     inbox('messages', 'DELETE', { id: m.id }, function () { state.data.messages.splice(Number(i), 1); });
   },
 
+  /* gallery */
+  galFilter: function (t) { state.gal.filter = t; state.gal.i = 0; render(); },
+  galOpen:   function (i) { state.gal.open = true; state.gal.i = Number(i); render(); },
+  galClose:  function () { state.gal.open = false; render(); },
+  galStep:   function (d) {
+    var n = galleryShown().length;
+    if (n) state.gal.i = ((state.gal.i + Number(d)) % n + n) % n;
+    render();
+  },
+
   refreshInbox: function () { loadInbox(); },
 
   /* panel — settings */
@@ -1699,6 +1794,14 @@ app.addEventListener('keydown', function (e) {
   if (e.key === 'Enter' && e.target.id === 'pw') actions.signIn();
 });
 
+/* The lightbox answers to Escape and the arrow keys. */
+document.addEventListener('keydown', function (e) {
+  if (!state.gal || !state.gal.open) return;
+  if (e.key === 'Escape')     { actions.galClose(); }
+  if (e.key === 'ArrowRight') { actions.galStep(1); }
+  if (e.key === 'ArrowLeft')  { actions.galStep(-1); }
+});
+
 /* Typing saves without re-rendering, so the caret stays put. */
 app.addEventListener('input', function (e) {
   var k = e.target.getAttribute && e.target.getAttribute('data-k');
@@ -1742,7 +1845,7 @@ function handleUpload(input) {
   var png  = file.type === 'image/png' && /^home\.(quickIcons|heroImg|ctaImg)/.test(path);
 
   var place = function (url) {
-    if (path === 'gallery') { state.data.gallery.unshift(url); save(); }
+    if (path === 'gallery') { state.data.gallery.unshift({ url: url, tag: '' }); save(); }
     else setPath(path, url);
     render();
   };

@@ -51,6 +51,8 @@ const DEFAULT_CONTENT = {
   ],
 
   policies: '',
+
+  // each photo is { url, tag } — the tag is a service name, used by the gallery filters
   gallery: [],
 
   hours: DAYS.map(function (day) { return { day: day, open: '' }; }),

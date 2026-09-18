@@ -71,6 +71,9 @@ Typing saves; leaving the field re-renders. File inputs carry
 
 - **Add a public page** — write a `xxxPage()` function, add a line to `render()`,
   add a link in `nav()`.
+- **Gallery photos** — each is `{ url, tag }`, the tag being a service name.
+  Tags drive the filter chips, and only tags that have photos are offered.
+  Photos saved as plain strings by an older version are lifted on load.
 - **Add a panel section** — add an entry to `SECTIONS` at the top of `app.js`,
   write a `panelXxx()` function, add it to the lookup object in `panel()`.
 - **Change colours or type** — `:root` in `styles.css`.
