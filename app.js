@@ -1053,6 +1053,49 @@ function empty(title, text) {
   '</div></div>';
 }
 
+/* The client's number, ready for a wa.me link.
+   A number typed without a country code (a local one, as most people write it)
+   borrows the leading digits from the studio's own WhatsApp number. */
+function clientWaNumber(contact) {
+  var raw = String(contact || '').trim();
+  var digits = raw.replace(/[^\d]/g, '');
+  if (digits.length < 7) return '';
+  if (raw.charAt(0) === '+') return digits;          // already written in full
+  /* Pad a national or local number up to the length of the studio's own, so
+     a St Kitts 869 555 0188 becomes 1 869 555 0188 rather than being sent as is. */
+  var mine = String(state.data.brand.whatsapp || '').replace(/[^\d]/g, '');
+  if (mine.length > digits.length) return mine.slice(0, mine.length - digits.length) + digits;
+  return digits;
+}
+
+/* What to say, matched to where the booking has got to. */
+function clientWaMessage(b) {
+  var studio = state.data.artist.name || 'ROSÉ Creative Artistry';
+  var when = b.date + ' at ' + b.time;
+  var sign = '\n\n— ' + studio;
+  if (b.status === 'confirmed')
+    return 'Hi ' + b.name + '! Your ' + b.service + ' appointment is confirmed for ' + when +
+      ' (' + b.place + '). See you then!' + sign;
+  if (b.status === 'cancelled')
+    return 'Hi ' + b.name + ', I am so sorry but I have had to cancel your ' + b.service +
+      ' appointment on ' + when + '. Please get in touch and we will find another date.' + sign;
+  if (b.status === 'completed')
+    return 'Hi ' + b.name + ', thank you for coming in! It was lovely doing your makeup. ' +
+      'If you have a moment, a review on the website would mean a lot.' + sign;
+  return 'Hi ' + b.name + '! Thank you for your ' + b.service + ' request for ' + when +
+    '. I am just checking the date and will confirm shortly.' + sign;
+}
+
+function clientWaButton(b) {
+  var num = clientWaNumber(b.contact);
+  if (!num) return '';
+  var label = b.status === 'confirmed' ? 'SEND CONFIRMATION'
+            : b.status === 'cancelled' ? 'LET THEM KNOW'
+            : 'WHATSAPP';
+  return '<a class="tag tag-wa" target="_blank" rel="noopener" href="https://wa.me/' + esc(num) +
+    '?text=' + encodeURIComponent(clientWaMessage(b)) + '">' + label + '</a>';
+}
+
 function panelBookings() {
   var bs = state.data.bookings;
   var count = function (st) { return bs.filter(function (b) { return b.status === st; }).length; };
@@ -1064,6 +1107,7 @@ function panelBookings() {
     if (b.status === 'completed' || b.status === 'cancelled')
       actions += '<span class="tag tag-plain" data-act="bRemove:' + i + '">REMOVE</span>';
     actions += '<span class="tag tag-bad" data-act="bCancel:' + i + '">CANCEL</span>';
+    actions = clientWaButton(b) + actions;
 
     return '<div class="b-row">' +
       '<div class="b-col"><span class="b-name">' + esc(b.name) + '</span>' +
@@ -1086,7 +1130,7 @@ function panelBookings() {
       ? '<div class="stack">' + rows + '</div>' +
         '<span class="btn-wide" data-act="clearCompleted">CLEAR COMPLETED &amp; CANCELLED</span>'
       : empty('No bookings yet',
-          'Requests from the booking page land here. Confirm them, mark them complete when the appointment is done, then clear them out.')) +
+          'Requests from the booking page land here. Confirm them, message the client on WhatsApp, mark them complete when the appointment is done, then clear them out.')) +
   '</div>';
 }
 

@@ -93,10 +93,15 @@ Half-filled forms are the only thing kept in the visitor's browser.
 | Phone alerts | ntfy | `NTFY_TOPIC` — no account needed |
 | Email alerts | Resend | `RESEND_API_KEY` and `NOTIFY_EMAIL` |
 
-A client can also tap **Message it on WhatsApp too** on the booking
-confirmation, which opens their own WhatsApp with the booking written out.
-That needs no API at all; set the studio's number in Settings → WhatsApp
-number to switch it on.
+Two WhatsApp routes need no API at all, and both key off the studio's number
+in Settings → WhatsApp number:
+
+- A client can tap **Message it on WhatsApp too** on the booking confirmation,
+  which opens their own WhatsApp with the booking written out.
+- Every booking in the panel carries a green WhatsApp button that opens a
+  message to that client, worded to match the booking's status. A number typed
+  without a country code borrows the leading digits from the studio's own
+  number, so a local 555 0177 is dialled in full.
 
 The two storage add-ons set their own environment variables. After adding
 any of these, redeploy (Actions → Deploy to Vercel → Run workflow).
@@ -188,4 +193,5 @@ match `DAYS` in `content.js`. A booking carries both a readable `date`
 
 - blocking dates and times that are already taken
 - payments / deposits
-- a note back to the client when a booking is confirmed
+- automatic email to the client (needs a domain of your own, since a shared
+  sender only delivers to the account owner)

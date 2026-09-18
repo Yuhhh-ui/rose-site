@@ -691,6 +691,11 @@ textarea { resize: vertical; line-height: 1.7; }
 .tag-plain { border: 1px solid rgba(243, 235, 225, .20); color: var(--dim); }
 .tag-bad { border: 1px solid rgba(196, 160, 160, .35); color: var(--bad); }
 .tag-lg { padding: 10px 18px; }
+.tag-wa {
+  display: inline-block; text-decoration: none;
+  background: #25D366; color: #0B0A09; font-weight: 500;
+}
+.tag-wa:hover { background: #1FB855; color: #0B0A09; }
 
 .btn-wide {
   cursor: pointer; display: inline-block; margin-top: 22px; padding: 13px 24px;
