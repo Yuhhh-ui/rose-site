@@ -50,7 +50,14 @@ const DEFAULT_CONTENT = {
     { name: 'Dramatic volume',      price: '', img: '' }
   ],
 
-  policies: '',
+  /* Each one is { title, text }. The panel adds and deletes them, so the
+     number of policies is not fixed. An entry with no text stays off the site. */
+  policies: [
+    { title: 'Deposits',      text: '' },
+    { title: 'Cancellations', text: '' },
+    { title: 'Travel',        text: '' },
+    { title: 'How to prep',   text: '' }
+  ],
 
   // each photo is { url, tag } — the tag is a service name, used by the gallery filters
   gallery: [],

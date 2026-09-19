@@ -69,6 +69,7 @@ function applySaved(saved) {
     if (saved[k]) state.data[k] = Object.assign(blank()[k], saved[k]);
   });
   normaliseGallery();
+  normalisePolicies();
 }
 
 function loadLocal() {
@@ -94,6 +95,27 @@ function normaliseGallery() {
   state.data.gallery = state.data.gallery.map(function (g) {
     return typeof g === 'string' ? { url: g, tag: '' } : { url: (g && g.url) || '', tag: (g && g.tag) || '' };
   }).filter(function (g) { return g.url; });
+}
+
+/* Policies used to be one block of text and are now a list of { title, text }.
+   An old block is split on its blank lines so nothing written before is lost. */
+function normalisePolicies() {
+  var p = state.data.policies;
+  if (typeof p === 'string') {
+    state.data.policies = p.split(/\n\s*\n/).map(function (para) {
+      return { title: '', text: para.trim() };
+    }).filter(function (x) { return x.text; });
+    return;
+  }
+  if (!Array.isArray(p)) { state.data.policies = []; return; }
+  state.data.policies = p.map(function (x) {
+    return { title: (x && x.title) || '', text: (x && x.text) || '' };
+  });
+}
+
+/* Only the ones with something written in them reach the website. */
+function livePolicies() {
+  return (state.data.policies || []).filter(function (p) { return p.text; });
 }
 
 function pick(keys) {
@@ -595,6 +617,8 @@ function servicesPage() {
     '</div>';
   }).join('');
 
+  var pol = livePolicies();
+
   return '<div class="page services">' +
     '<div class="sv-head">' +
       '<div class="sv-head-copy">' +
@@ -620,20 +644,37 @@ function servicesPage() {
       '<div class="lash-grid">' + lashes + '</div>' +
     '</section>' +
 
-    '<section class="policy-band" data-act="go:services#policies">' +
-      '<div class="policy-band-copy">' +
-        '<span class="policy-band-label">BEFORE YOU BOOK</span>' +
-        '<h3>Deposits, timing, travel and touch-ups.</h3>' +
-      '</div>' +
-      '<span class="policy-band-link">READ THE POLICIES →</span>' +
-    '</section>' +
+    /* Nothing written yet: a visitor is not shown a band that leads nowhere.
+       Rosé herself still sees it, with the note about where to write them. */
+    (pol.length || state.logged
+      ? '<section class="policy-band" data-act="go:services#policies">' +
+          '<div class="policy-band-copy">' +
+            '<span class="policy-band-label">BEFORE YOU BOOK</span>' +
+            '<h3>Deposits, timing, travel and touch-ups.</h3>' +
+          '</div>' +
+          '<span class="policy-band-link">READ THE POLICIES →</span>' +
+        '</section>'
+      : '') +
 
-    '<section class="policies" id="policies">' +
-      '<p class="eyebrow">GOOD TO KNOW</p>' +
-      (d.policies
-        ? '<p>' + esc(d.policies) + '</p>'
-        : '<p class="empty-hint">Your policies will appear here — add them in the studio panel under Website content.</p>') +
-    '</section>' +
+    (pol.length || state.logged
+      ? '<section class="policies" id="policies">' +
+          '<div class="pol-head">' +
+            '<p class="eyebrow">GOOD TO KNOW</p>' +
+            '<h3 class="pol-title">Before you book</h3>' +
+          '</div>' +
+          (pol.length
+            ? '<div class="pol-grid">' + pol.map(function (p, i) {
+                return '<article class="pol-item">' +
+                  '<span class="pol-num">' + pad2(i + 1) + '</span>' +
+                  '<div class="pol-copy">' +
+                    (p.title ? '<h4 class="pol-name">' + esc(p.title) + '</h4>' : '') +
+                    '<p class="pol-text">' + esc(p.text) + '</p>' +
+                  '</div>' +
+                '</article>';
+              }).join('') + '</div>'
+            : '<p class="empty-hint">Your policies will appear here — write them in the studio panel under Website content.</p>') +
+        '</section>'
+      : '') +
 
     '<div class="tail-cta"><span class="btn" data-act="go:booking">BOOK A SERVICE</span></div>' +
   '</div>';
@@ -1051,7 +1092,8 @@ function footer() {
       '</div>' +
       '<div class="foot-col">' +
         '<span class="foot-label">GOOD TO KNOW</span>' +
-        '<span class="foot-link" data-act="go:services#policies">Policies</span>' +
+        (livePolicies().length || state.logged
+          ? '<span class="foot-link" data-act="go:services#policies">Policies</span>' : '') +
         '<span class="foot-link" data-act="go:contact#hours">Opening hours</span>' +
       '</div>' +
       '<div class="foot-col">' +
@@ -1393,8 +1435,21 @@ function panelPages() {
           '</div>';
         }).join('') +
         '<p class="eyebrow" style="margin-top:12px">SERVICES PAGE — GOOD TO KNOW</p>' +
-        '<textarea rows="5" data-k="policies" ' +
-          'placeholder="Deposits, cancellations, travel, how to prep">' + esc(d.policies) + '</textarea>' +
+        '<p class="empty-text" style="margin:0 0 16px;color:var(--mute-2)">' +
+          'One box per policy. Anything left blank stays off the website.</p>' +
+        (d.policies || []).map(function (p, i) {
+          return '<div class="pol-admin">' +
+            '<span class="pol-admin-num">' + pad2(i + 1) + '</span>' +
+            '<div class="pol-admin-fields">' +
+              '<input type="text" value="' + esc(p.title) + '" data-k="policies.' + i + '.title" ' +
+                'placeholder="Heading, e.g. Deposits">' +
+              '<textarea rows="3" data-k="policies.' + i + '.text" ' +
+                'placeholder="What you want them to know">' + esc(p.text) + '</textarea>' +
+              '<span class="remove-link" data-act="delPolicy:' + i + '">DELETE THIS ONE</span>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+        '<span class="btn-wide" style="margin-top:4px" data-act="addPolicy">+ ADD A POLICY</span>' +
       '</div>' +
     '</div>' +
   '</div>';
@@ -1722,6 +1777,16 @@ var actions = {
     var s = state.data.services[Number(i)];
     if (!window.confirm('Delete "' + (s.name || 'this service') + '"? Bookings already taken for it are not affected.')) return;
     state.data.services.splice(Number(i), 1);
+    save(); render();
+  },
+  addPolicy: function () {
+    state.data.policies.push({ title: '', text: '' });
+    save(); render();
+  },
+  delPolicy: function (i) {
+    var p = state.data.policies[Number(i)];
+    if (!window.confirm('Delete "' + (p.title || p.text || 'this policy') + '"?')) return;
+    state.data.policies.splice(Number(i), 1);
     save(); render();
   },
   addLash: function () {

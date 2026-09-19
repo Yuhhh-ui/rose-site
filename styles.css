@@ -408,9 +408,35 @@ textarea { resize: vertical; line-height: 1.7; }
 .policy-band h3 { margin: 0; font-family: var(--serif); font-size: clamp(22px, 2.8vw, 30px); font-weight: 400; line-height: 1.15; color: var(--sand-ink); }
 .policy-band-link { font-size: 10px; font-weight: 400; letter-spacing: .22em; color: var(--sand-ink); white-space: nowrap; }
 
-.policies { padding: clamp(40px, 5vw, 64px) var(--gutter) 0; max-width: 820px; margin: 0 auto; }
-.policies .eyebrow { margin-bottom: 22px; }
-.policies p { margin: 0; font-size: 14px; font-weight: 200; line-height: 1.95; color: var(--mute-2); white-space: pre-wrap; }
+.policies { padding: clamp(40px, 5vw, 64px) var(--gutter) 0; max-width: 1000px; margin: 0 auto; }
+.pol-head { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.pol-head .eyebrow { margin: 0; }
+.pol-title {
+  margin: 0; font-family: var(--serif); font-size: clamp(26px, 3.4vw, 40px);
+  font-weight: 300; line-height: 1.1; color: var(--cream);
+}
+.pol-grid {
+  margin-top: clamp(30px, 4vw, 48px);
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: clamp(22px, 3vw, 40px);
+}
+.pol-item {
+  display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start;
+  padding-top: 20px; border-top: 1px solid var(--gold-line);
+}
+.pol-num { font-family: var(--serif); font-size: 15px; font-weight: 300; color: var(--gold); letter-spacing: .06em; }
+.pol-copy { display: flex; flex-direction: column; gap: 9px; }
+.pol-name {
+  margin: 0; font-family: var(--serif); font-size: 17px; font-weight: 400;
+  line-height: 1.25; color: var(--cream); letter-spacing: .01em;
+}
+.pol-text { margin: 0; font-size: 13.5px; font-weight: 200; line-height: 1.9; color: var(--mute-2); white-space: pre-wrap; }
+.policies .empty-hint { margin: 26px 0 0; text-align: center; }
+
+/* panel: one box per policy */
+.pol-admin { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; margin-bottom: 18px; }
+.pol-admin-num { font-family: var(--serif); font-size: 15px; font-weight: 300; color: var(--gold); padding-top: 12px; }
+.pol-admin-fields { display: flex; flex-direction: column; gap: 10px; }
 
 .tail-cta { display: flex; justify-content: center; padding: clamp(44px, 5.5vw, 76px) var(--gutter); }
 .tail-cta .btn { padding: 17px 46px; letter-spacing: .24em; }

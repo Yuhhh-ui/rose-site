@@ -93,6 +93,12 @@ Typing saves; leaving the field re-renders. File inputs carry
 - **Services and lash styles** are a plain list the panel adds to and deletes
   from, so nothing assumes there are four of them. Bookings record the service
   name, not its position, so deleting one leaves past bookings intact.
+- **Policies** are the same shape: a list of `{ title, text }` shown as numbered
+  cards at the foot of the services page. One written as a single block of text
+  by an older version is split on its blank lines on load. A policy with no text
+  stays off the site, and with none written at all the band, the section and the
+  footer link are hidden from visitors — Rosé, signed in, still sees them with a
+  note about where to write them.
 
 ## Saving, for real
 
