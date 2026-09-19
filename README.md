@@ -71,6 +71,10 @@ Typing saves; leaving the field re-renders. File inputs carry
 
 - **Add a public page** — write a `xxxPage()` function, add a line to `render()`,
   add a link in `nav()`.
+- **Photos** — `photo(url, label, natural)` in `app.js` renders every one. They
+  are never cropped: the default fits the whole photo inside its frame, and
+  `natural` lets the frame take the photo's own shape instead (the caller adds
+  `auto` to the frame). Never reintroduce `object-fit: cover`.
 - **Gallery photos** — each is `{ url, tag }`, the tag being a service name.
   Tags drive the filter chips, and only tags that have photos are offered.
   Photos saved as plain strings by an older version are lifted on load.

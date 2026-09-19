@@ -86,7 +86,13 @@ textarea { resize: vertical; line-height: 1.7; }
 
 /* --- shared bits -------------------------------------------------------- */
 .frame { position: relative; background: var(--frame); }
-.fill  { position: absolute; inset: 0; background-size: cover; background-position: center; }
+/* The whole photo, always. object-fit: contain fits it inside the frame
+   rather than filling the frame and cutting the edges off. */
+.fill  { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+
+/* A frame that takes the photo's own shape, so there is nothing around it. */
+.shot  { display: block; width: 100%; height: auto; }
+.auto  { aspect-ratio: auto !important; height: auto !important; min-height: 0 !important; }
 .ph    { position: absolute; inset: 0; display: grid; place-items: center; }
 .ph-label { font-size: 8.5px; font-weight: 300; letter-spacing: .24em; color: var(--ghost); }
 
@@ -183,7 +189,7 @@ textarea { resize: vertical; line-height: 1.7; }
 .sand .ph-label small { display: block; font-size: 8px; letter-spacing: .14em; }
 
 /* cut-out portraits sit on the band rather than filling a frame */
-.cutout .fill { background-size: contain; background-position: bottom center; background-repeat: no-repeat; }
+.cutout .fill { object-fit: contain; object-position: bottom center; }
 .cutout.has-img { background: transparent !important; border: 0 !important; }
 
 .btn-dark {
@@ -401,6 +407,7 @@ textarea { resize: vertical; line-height: 1.7; }
 .artist-figure { display: flex; justify-content: center; }
 .artist-frame { width: 100%; max-width: clamp(280px, 34vw, 440px); aspect-ratio: 3 / 4.4; background: var(--frame); border: 1px solid rgba(201, 164, 124, .34); padding: 10px; }
 .artist-portrait { position: relative; width: 100%; height: 100%; background: #241E18; }
+.artist-frame.auto .artist-portrait { height: auto; background: none; }
 .artist-portrait .ph-label { font-size: 9px; letter-spacing: .26em; }
 
 .story {
@@ -538,7 +545,7 @@ textarea { resize: vertical; line-height: 1.7; }
 .rv-field textarea { min-height: 84px; }
 .rv-field input:focus, .rv-field textarea:focus { border-color: var(--sand-ink); }
 .rv-attach { display: flex; align-items: center; gap: 12px; }
-.rv-attach img { width: 44px; height: 44px; object-fit: cover; border: 1px solid rgba(46, 36, 28, .28); }
+.rv-attach img { width: 44px; height: 44px; object-fit: contain; background: rgba(46, 36, 28, .12); border: 1px solid rgba(46, 36, 28, .28); }
 .rv-attach-name { font-size: 8.5px; font-weight: 400; letter-spacing: .24em; color: var(--sand-script); }
 .rv-attach-remove { cursor: pointer; font-size: 8.5px; letter-spacing: .2em; color: var(--sand-dim); text-decoration: underline; }
 .rv-form-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 2px; }

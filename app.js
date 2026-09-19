@@ -219,9 +219,17 @@ function money(v) {
   return v.charAt(0) === '$' ? v : '$' + v;
 }
 
-/* photo frame contents: the image, or a labelled placeholder */
-function photo(url, label) {
-  if (url) return '<div class="fill" style="background-image:url(' + String(url).replace(/["()]/g, '') + ')"></div>';
+/* Photo frame contents: the image, or a labelled placeholder.
+
+   Nothing is ever cropped. A normal photo is fitted whole inside its frame,
+   so a tall portrait in a wide slot shows the full picture with a little of
+   the frame either side. Pass natural = true and the frame takes the photo's
+   own shape instead, leaving no space around it at all; the caller adds the
+   "auto" class to the frame to release its fixed shape. */
+function photo(url, label, natural) {
+  if (url) {
+    return '<img class="' + (natural ? 'shot' : 'fill') + '" src="' + esc(url) + '" alt="">';
+  }
   return '<div class="ph"><span class="ph-label">' + esc(label || '') + '</span></div>';
 }
 
@@ -726,14 +734,15 @@ function artistPage() {
         '<span class="artist-tagline">' + esc(a.tagline || 'Your trusted makeup artist · St Kitts') + '</span>' +
       '</div>' +
       '<div class="artist-figure">' +
-        '<div class="artist-frame">' +
-          '<div class="artist-portrait">' + photo(a.portrait, 'PORTRAIT') + '</div>' +
+        '<div class="artist-frame' + (a.portrait ? ' auto' : '') + '">' +
+          '<div class="artist-portrait">' + photo(a.portrait, 'PORTRAIT', !!a.portrait) + '</div>' +
         '</div>' +
       '</div>' +
     '</section>' +
 
     '<section class="story">' +
-      '<div class="story-img frame">' + photo(a.storyImg, 'PHOTO') + '</div>' +
+      '<div class="story-img frame' + (a.storyImg ? ' auto' : '') + '">' +
+        photo(a.storyImg, 'PHOTO', !!a.storyImg) + '</div>' +
       '<div class="story-copy">' +
         '<span class="eyebrow">HER STORY</span>' +
         (a.story
