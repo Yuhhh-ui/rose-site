@@ -43,7 +43,8 @@ var state = {
   sending: false,      // a booking is on its way to the server
   inboxAt: 0,          // when bookings, reviews and messages were last fetched
   notifyTest: null,    // result of Settings → Send a test alert
-  lastBooking: null    // the booking just sent, for the WhatsApp link on the confirmation
+  lastBooking: null,   // the booking just sent, for the WhatsApp link on the confirmation
+  readPolicies: false  // the policies have been shown on the way to the form this visit
 };
 
 /* --- storage ------------------------------------------------------------ */
@@ -56,7 +57,7 @@ var state = {
 
 var KEY = 'rose-studio-v1';
 var FORMS_KEY = 'rose-forms-v1';
-var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'policiesIntro', 'gallery', 'hours', 'brand'];
+var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'gallery', 'hours', 'brand'];
 var FORM_KEYS = ['form', 'rform', 'cform'];
 
 function blank() { return JSON.parse(JSON.stringify(DEFAULT_CONTENT)); }
@@ -97,25 +98,29 @@ function normaliseGallery() {
   }).filter(function (g) { return g.url; });
 }
 
-/* Policies used to be one block of text and are now a list of { title, text }.
-   An old block is split on its blank lines so nothing written before is lost. */
+/* Policies used to be one block of text and are now a list of
+   { title, text, img }. An old block is split on its blank lines so nothing
+   written before is lost, and a site that never had any starts from the
+   headings in content.js rather than from nothing at all. */
 function normalisePolicies() {
   var p = state.data.policies;
   if (typeof p === 'string') {
-    state.data.policies = p.split(/\n\s*\n/).map(function (para) {
-      return { title: '', text: para.trim() };
+    var paras = p.split(/\n\s*\n/).map(function (para) {
+      return { title: '', text: para.trim(), img: '' };
     }).filter(function (x) { return x.text; });
+    state.data.policies = paras.length ? paras : blank().policies;
     return;
   }
-  if (!Array.isArray(p)) { state.data.policies = []; return; }
+  if (!Array.isArray(p)) { state.data.policies = blank().policies; return; }
   state.data.policies = p.map(function (x) {
-    return { title: (x && x.title) || '', text: (x && x.text) || '' };
+    return { title: (x && x.title) || '', text: (x && x.text) || '', img: (x && x.img) || '' };
   });
 }
 
-/* Only the ones with something written in them reach the website. */
+/* Only the ones with something on them \u2014 words, a picture, or both \u2014 reach
+   the website. A heading on its own is one she has not got to yet. */
 function livePolicies() {
-  return (state.data.policies || []).filter(function (p) { return p.text; });
+  return (state.data.policies || []).filter(function (p) { return p.text || p.img; });
 }
 
 function pick(keys) {
@@ -373,7 +378,12 @@ function flashText(prefix) {
 }
 
 /* go('services', 'policies') opens the page and scrolls to the element with that id */
+/* The policies are read on the way to booking, once a visit. Every route to
+   the form comes through here \u2014 the nav button, the service cards, the bands
+   at the foot of each page \u2014 so there is one place to send them via the
+   policies, and one flag that says they have been seen. */
 function go(page, anchor) {
+  if (page === 'booking' && !state.readPolicies && livePolicies().length) page = 'policies';
   if (page !== 'booking') state.booked = null;
   if (page !== 'gallery') state.gal.open = false;
   state.page = page;
@@ -428,8 +438,6 @@ function nav() {
       link('gallery', 'GALLERY') +
       link('artist', 'THE ARTIST') +
       link('reviews', 'REVIEWS') +
-      /* nothing written yet: no link to a page with nothing on it */
-      (livePolicies().length || state.logged || state.page === 'policies' ? link('policies', 'POLICIES') : '') +
       link('contact', 'CONTACT') +
       '<span class="nav-book" data-act="go:booking">BOOK</span>' +
     '</nav>' +
@@ -646,10 +654,10 @@ function servicesPage() {
       '<div class="lash-grid">' + lashes + '</div>' +
     '</section>' +
 
-    /* The policies have a page of their own; this band is the way to it.
-       With nothing written yet a visitor is not sent somewhere empty. */
+    /* The policies sit in front of the booking form, so this band goes there
+       rather than off to a page of its own. */
     (pol.length || state.logged
-      ? '<section class="policy-band" data-act="go:policies">' +
+      ? '<section class="policy-band" data-act="go:booking">' +
           '<div class="policy-band-copy">' +
             '<span class="policy-band-label">BEFORE YOU BOOK</span>' +
             '<h3>Deposits, timing, travel and touch-ups.</h3>' +
@@ -1009,53 +1017,72 @@ function bookingPage() {
         (state.flash === 'booking-past'
           ? '<p class="err">That date has already passed. Please pick another.</p>' : '') +
         (flashText('send-error') ? '<p class="err">Could not send: ' + esc(flashText('send-error')) + '</p>' : '') +
+        /* the policies were shown on the way in; this is the way back to them */
+        (livePolicies().length
+          ? '<p class="confirm-note">Booking a date confirms you have read the ' +
+              '<span class="link-gold" data-act="go:policies">policies</span>.</p>' : '') +
       '</div>' +
     '</section>' +
   '</div>';
 }
 
-/* A page of its own, linked from the nav, the footer and the services band.
-   Each policy is one row: its number and heading on the left, what it says on
-   the right, so it reads down the page the way a printed sheet would. */
-function policiesPage() {
-  var d = state.data, pol = livePolicies();
+/* The policies, as a page. It is not in the nav: a visitor meets it on the way
+   to booking, which is the moment the wording is about. Ros\u00e9 reaches it from
+   the panel, and the booking form keeps a quiet link back to it.
 
-  var rows = pol.map(function (p, i) {
-    return '<article class="pol-row">' +
-      '<div class="pol-row-head">' +
-        '<span class="pol-num">' + pad2(i + 1) + '</span>' +
-        '<h2 class="pol-name">' + esc(p.title || 'Good to know') + '</h2>' +
+   A sticky index down the left side, and each policy as its own numbered
+   piece: a heading, then the policy itself \u2014 typed out, or photographed if
+   she already has it written somewhere. */
+function policiesPage() {
+  var pol = livePolicies();
+
+  var index = pol.map(function (p, i) {
+    return '<span class="pol-index-item' + (i === 0 ? ' on' : '') + '" data-act="polJump:' + i + '">' +
+      '<span class="pol-index-num">' + pad2(i + 1) + '</span>' +
+      '<span class="pol-index-name">' + esc(p.title || 'Good to know') + '</span>' +
+    '</span>';
+  }).join('');
+
+  var items = pol.map(function (p, i) {
+    return '<article class="pol-item" id="pol-' + i + '">' +
+      '<div class="pol-item-head">' +
+        '<span class="pol-item-num">' + pad2(i + 1) + '</span>' +
+        '<h2 class="pol-item-name">' + esc(p.title || 'Good to know') + '</h2>' +
       '</div>' +
-      '<p class="pol-text">' + esc(p.text) + '</p>' +
+      (p.img ? '<div class="pol-shot auto">' + photo(p.img, 'POLICY PHOTO', true) + '</div>' : '') +
+      (p.text ? '<p class="pol-text">' + esc(p.text) + '</p>' : '') +
     '</article>';
   }).join('');
 
   return '<div class="page pol-page">' +
     '<section class="pol-hero">' +
-      '<span class="script">Good to know</span>' +
-      '<h1 class="pol-page-title">Policies</h1>' +
-      (d.policiesIntro
-        ? '<p class="pol-lead">' + esc(d.policiesIntro) + '</p>'
-        : '<p class="pol-lead">A few things worth knowing before your appointment.</p>') +
+      '<div class="pol-hero-copy">' +
+        '<span class="script">Before you book</span>' +
+        '<h1 class="pol-page-title">Policies</h1>' +
+      '</div>' +
+      (pol.length ? '<span class="pol-count">' + pol.length + ' THING' + (pol.length === 1 ? '' : 'S') + ' TO KNOW</span>' : '') +
     '</section>' +
 
     (pol.length
-      ? '<section class="pol-list">' + rows + '</section>'
+      ? '<div class="pol-body">' +
+          '<aside class="pol-index">' + index + '</aside>' +
+          '<div class="pol-list">' + items + '</div>' +
+        '</div>'
       : '<section class="pol-empty">' +
           '<p class="empty-hint">' +
             (state.logged
-              ? 'Nothing written yet \u2014 add your policies in the studio panel under Website content.'
+              ? 'Nothing written yet \u2014 fill the headings in under Website content, by typing them out or adding a picture of each one.'
               : 'Nothing here yet. Ask away when you book and Ros\u00e9 will talk you through it.') +
           '</p>' +
         '</section>') +
 
     '<section class="pol-tail">' +
-      '<span class="script">Still wondering?</span>' +
-      '<p class="pol-tail-copy">Anything not answered here, just ask \u2014 it is no trouble at all.</p>' +
-      '<div class="pol-tail-btns">' +
-        '<span class="btn" data-act="go:booking">BOOK AN APPOINTMENT</span>' +
-        '<span class="btn-line" data-act="go:contact">ASK A QUESTION</span>' +
+      '<div class="pol-tail-copy">' +
+        '<span class="pol-tail-label">STILL UNSURE?</span>' +
+        '<h3 class="pol-tail-title">Message me and I will talk it through.</h3>' +
+        '<span class="pol-tail-note">Booking a date confirms you have read these.</span>' +
       '</div>' +
+      '<span class="btn pol-tail-btn" data-act="policiesRead">BOOK AN APPOINTMENT</span>' +
     '</section>' +
   '</div>';
 }
@@ -1120,8 +1147,7 @@ function footer() {
       '</div>' +
       '<div class="foot-col">' +
         '<span class="foot-label">GOOD TO KNOW</span>' +
-        (livePolicies().length || state.logged
-          ? '<span class="foot-link" data-act="go:policies">Policies</span>' : '') +
+
         '<span class="foot-link" data-act="go:contact#hours">Opening hours</span>' +
       '</div>' +
       '<div class="foot-col">' +
@@ -1462,20 +1488,26 @@ function panelPages() {
             '</div>' +
           '</div>';
         }).join('') +
-        '<p class="eyebrow" style="margin-top:12px">THE POLICIES PAGE</p>' +
+        '<p class="eyebrow" style="margin-top:12px">POLICIES</p>' +
         '<p class="empty-text" style="margin:0 0 16px;color:var(--mute-2)">' +
-          'One box per policy, shown on their own page. Anything left blank stays off the website.</p>' +
-        '<div class="field"><span class="field-label">The line under the title</span>' +
-          '<input type="text" value="' + esc(d.policiesIntro || '') + '" data-k="policiesIntro" ' +
-            'placeholder="A few things worth knowing before your appointment."></div>' +
+          'These are shown to a client on the way to the booking form, not as a page anyone browses. ' +
+          'Type each one out, or add a picture of it if you already have it written somewhere \u2014 ' +
+          'both is fine. A heading on its own stays off the website. ' +
+          '<span class="link-gold" data-act="go:policies">See the page \u2192</span></p>' +
         (d.policies || []).map(function (p, i) {
           return '<div class="pol-admin">' +
             '<span class="pol-admin-num">' + pad2(i + 1) + '</span>' +
             '<div class="pol-admin-fields">' +
               '<input type="text" value="' + esc(p.title) + '" data-k="policies.' + i + '.title" ' +
-                'placeholder="Heading, e.g. Deposits">' +
+                'placeholder="Heading, e.g. Cancellation">' +
               '<textarea rows="3" data-k="policies.' + i + '.text" ' +
                 'placeholder="What you want them to know">' + esc(p.text) + '</textarea>' +
+              (p.img ? '<div class="a-img-md frame auto">' + photo(p.img, 'NO PHOTO', true) + '</div>' : '') +
+              '<div class="upload-row">' +
+                '<label class="upload">' + (p.img ? 'CHANGE PICTURE' : 'ADD A PICTURE') +
+                  '<input type="file" accept="image/*" data-upload="policies.' + i + '.img"></label>' +
+                (p.img ? '<span class="remove-link" data-act="clearImg:policies.' + i + '.img">REMOVE PICTURE</span>' : '') +
+              '</div>' +
               '<span class="remove-link" data-act="delPolicy:' + i + '">DELETE THIS ONE</span>' +
             '</div>' +
           '</div>';
@@ -1676,6 +1708,29 @@ function render() {
       if (pos && typeof again.setSelectionRange === 'function') { try { again.setSelectionRange(pos[0], pos[1]); } catch (e) {} }
     }
   }
+
+  if (state.page === 'policies') { watchPolicyIndex(); markPolicy(); }
+}
+
+/* The index down the side of the policies marks whichever one is being read.
+   One listener, added the first time the page is opened and left in place; it
+   does nothing when no policy is on screen. */
+var polSpy = false;
+function watchPolicyIndex() {
+  if (polSpy) return;
+  polSpy = true;
+  window.addEventListener('scroll', markPolicy, { passive: true });
+}
+
+function markPolicy() {
+  var items = document.querySelectorAll('.pol-item');
+  var links = document.querySelectorAll('.pol-index-item');
+  if (!items.length || !links.length) return;
+  var at = 0;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].getBoundingClientRect().top <= 160) at = i;
+  }
+  for (var j = 0; j < links.length; j++) links[j].classList.toggle('on', j === at);
 }
 
 /* =========================================================================
@@ -1712,6 +1767,13 @@ function submit(path, payload, local, okFlash) {
 
 var actions = {
   go:      function (p) { var h = p.split('#'); go(h[0], h[1]); },
+
+  /* read, and on to the form */
+  policiesRead: function () { state.readPolicies = true; go('booking'); },
+  polJump: function (i) {
+    var el = document.getElementById('pol-' + Number(i));
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  },
   sec:     function (s) { goSection(s); },
 
   signIn: function () {
@@ -1812,7 +1874,7 @@ var actions = {
     save(); render();
   },
   addPolicy: function () {
-    state.data.policies.push({ title: '', text: '' });
+    state.data.policies.push({ title: '', text: '', img: '' });
     save(); render();
   },
   delPolicy: function (i) {

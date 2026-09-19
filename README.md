@@ -11,7 +11,7 @@ functions on the back. No framework, no build step.
 | `styles.css` | All styling. Colours and fonts are variables at the top under `:root`. |
 | `content.js` | The words, services and lash list a fresh site starts with. Safe to edit. |
 | `client.js` | Talks to the server. Decides whether the site is running on Vercel or from disk. |
-| `app.js` | State, the eight public pages, and the studio panel. |
+| `app.js` | State, the public pages, and the studio panel. |
 | `api/` | The server: one file per thing (content, session, bookings, reviews, messages, upload, reset). |
 | `lib/` | Shared server code: storage, login, photos, notifications. |
 | `dev-server.js` | Runs the whole thing locally with an in-memory store. |
@@ -93,14 +93,19 @@ Typing saves; leaving the field re-renders. File inputs carry
 - **Services and lash styles** are a plain list the panel adds to and deletes
   from, so nothing assumes there are four of them. Bookings record the service
   name, not its position, so deleting one leaves past bookings intact.
-- **Policies** have a page of their own, `policiesPage()`, reached from the nav,
-  the footer and the band on the services page. Each one is `{ title, text }`
-  and renders as a numbered row; `policiesIntro` is the line under the title.
-  One written as a single block of text by an older version is split on its
-  blank lines on load. A policy with no text stays off the site, and with none
-  written at all the nav link, the footer link and the services band are hidden
-  from visitors — Rosé, signed in, still sees them, with a note about where to
-  write them.
+- **Policies** are `policiesPage()`, and they are deliberately not in the nav.
+  A client meets them on the way to the booking form: `go('booking')` sends
+  them to the policies first, once a visit, and `policiesRead` sets
+  `state.readPolicies` and carries on to the form. Every route to the form goes
+  through `go()`, so that one line covers the nav button, the service cards and
+  every band on the site. The form itself keeps a quiet link back, and Rosé
+  reaches the page from the panel.
+  Each policy is `{ title, text, img }` — typed out, photographed, or both — and
+  renders as a numbered piece with a sticky index down the side that marks
+  whichever one is being read. A heading on its own is one she has not written
+  yet, so it stays off the site; with none written at all the booking form
+  opens straight away. Policies saved as a single block of text by an older
+  version are split on their blank lines on load.
 
 ## Saving, for real
 

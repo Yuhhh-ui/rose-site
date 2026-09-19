@@ -101,6 +101,7 @@ textarea { resize: vertical; line-height: 1.7; }
 .pre     { white-space: pre-wrap; }
 .row     { display: flex; gap: 14px; flex-wrap: wrap; }
 
+.script  { font-family: var(--script); line-height: .85; color: var(--gold); }
 .empty-hint { color: var(--faint); font-style: italic; }
 
 .btn, .btn-line, .btn-sm, .btn-chip {
@@ -408,52 +409,90 @@ textarea { resize: vertical; line-height: 1.7; }
 .policy-band h3 { margin: 0; font-family: var(--serif); font-size: clamp(22px, 2.8vw, 30px); font-weight: 400; line-height: 1.15; color: var(--sand-ink); }
 .policy-band-link { font-size: 10px; font-weight: 400; letter-spacing: .22em; color: var(--sand-ink); white-space: nowrap; }
 
-/* --- policies ----------------------------------------------------------- */
+/* --- policies ------------------------------------------------------------
+   Not a page in the nav: it is shown on the way to the booking form. A sticky
+   index down the left, the policies themselves on the right. */
 .pol-hero {
-  display: flex; flex-direction: column; gap: 10px;
-  padding: clamp(44px, 5.5vw, 84px) var(--gutter) clamp(24px, 3vw, 40px);
-  border-bottom: 1px solid var(--line);
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 28px; flex-wrap: wrap;
+  padding: clamp(40px, 5vw, 76px) var(--gutter) clamp(22px, 2.8vw, 36px);
 }
+.pol-hero-copy { display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
 .pol-hero .script { font-size: clamp(40px, 5vw, 62px); line-height: .82; }
 .pol-page-title {
   margin: 0; font-family: var(--serif); font-size: clamp(40px, 5.6vw, 80px);
   line-height: .92; font-weight: 400; letter-spacing: .015em; text-transform: uppercase;
 }
-.pol-lead {
-  margin: 10px 0 0; max-width: 560px;
-  font-size: 14px; font-weight: 200; line-height: 1.9; color: var(--mute-2);
+.pol-count { font-size: 9.5px; font-weight: 300; letter-spacing: .34em; color: var(--dim); }
+
+.pol-body {
+  display: grid; grid-template-columns: clamp(150px, 16vw, 210px) minmax(0, 1fr);
+  gap: clamp(24px, 3.5vw, 56px); align-items: start;
+  padding: 0 var(--gutter) clamp(44px, 5.5vw, 80px);
 }
 
-.pol-list { padding: clamp(10px, 1.6vw, 22px) var(--gutter) 0; }
-.pol-row {
-  display: grid; grid-template-columns: minmax(200px, 300px) 1fr; gap: clamp(20px, 4vw, 64px);
-  padding: clamp(26px, 3.4vw, 44px) 0; border-bottom: 1px solid var(--line);
+.pol-index {
+  position: sticky; top: 24px;
+  display: flex; flex-direction: column; gap: 2px;
+  border-top: 1px solid var(--line-3); padding-top: 16px;
 }
-.pol-row-head { display: flex; align-items: baseline; gap: 14px; }
-.pol-num { font-family: var(--serif); font-size: 15px; font-weight: 300; color: var(--gold); letter-spacing: .06em; }
-.pol-name {
-  margin: 0; font-family: var(--serif); font-size: clamp(19px, 2.2vw, 26px); font-weight: 400;
-  line-height: 1.2; color: var(--cream); letter-spacing: .01em;
+.pol-index-item {
+  cursor: pointer; display: flex; align-items: baseline; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid rgba(243, 235, 225, .07);
+  color: var(--dim); transition: color .28s ease;
 }
-.pol-text {
-  margin: 0; max-width: 620px;
-  font-size: 14px; font-weight: 200; line-height: 1.95; color: var(--mute-2); white-space: pre-wrap;
-}
+.pol-index-item:hover, .pol-index-item.on { color: var(--cream); }
+.pol-index-num { font-size: 8.5px; font-weight: 300; letter-spacing: .20em; color: var(--gold); }
+.pol-index-name { font-size: 10.5px; font-weight: 300; letter-spacing: .20em; text-transform: uppercase; }
 
-.pol-empty { padding: clamp(50px, 7vw, 90px) var(--gutter); text-align: center; }
+.pol-list { display: flex; flex-direction: column; gap: clamp(30px, 4vw, 62px); min-width: 0; }
+.pol-item { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; scroll-margin-top: 100px; }
+.pol-item-head {
+  display: flex; align-items: baseline; gap: 14px;
+  border-bottom: 1px solid var(--line-2); padding-bottom: 12px;
+}
+.pol-item-num { font-family: var(--serif); font-size: clamp(22px, 2.4vw, 32px); font-weight: 300; color: var(--gold); }
+.pol-item-name {
+  margin: 0; font-family: var(--serif); font-size: clamp(24px, 2.8vw, 38px);
+  line-height: 1.05; font-weight: 400; color: var(--cream);
+}
+.pol-shot {
+  position: relative; aspect-ratio: 16 / 9; background: var(--frame);
+  display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(243, 235, 225, .06);
+}
+/* A photographed policy is usually a tall screenshot. It keeps its own shape
+   rather than sitting in the 16:9 box, and is capped so one policy does not
+   take a whole screen to scroll past. */
+.pol-shot.auto { background: transparent; border: 0; display: block; overflow: visible; }
+.pol-shot .shot { display: block; width: auto; max-width: 100%; max-height: 72vh; margin: 0 auto 0 0; }
+.pol-text { margin: 0; max-width: 680px; font-size: 14px; font-weight: 200; line-height: 1.95; color: var(--mute-2); white-space: pre-wrap; }
+
+.pol-empty { padding: clamp(40px, 6vw, 80px) var(--gutter); text-align: center; }
 
 .pol-tail {
-  display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center;
-  padding: clamp(50px, 6.5vw, 96px) var(--gutter);
+  display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+  padding: clamp(34px, 4vw, 54px) var(--gutter);
+  background: var(--panel); border-top: 1px solid var(--line);
 }
-.pol-tail .script { font-size: clamp(34px, 4.2vw, 50px); }
-.pol-tail-copy { margin: 0; max-width: 440px; font-size: 14px; font-weight: 200; line-height: 1.85; color: var(--mute-2); }
-.pol-tail-btns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+.pol-tail-copy { display: flex; flex-direction: column; gap: 10px; }
+.pol-tail-label { font-size: 9.5px; font-weight: 300; letter-spacing: .32em; color: var(--dim); }
+.pol-tail-title {
+  margin: 0; font-family: var(--serif); font-size: clamp(22px, 2.4vw, 30px);
+  font-weight: 300; color: var(--cream);
+}
+.pol-tail-note { font-size: 11px; font-weight: 300; color: var(--dim); }
+.pol-tail-btn { padding: 16px 34px; font-weight: 500; letter-spacing: .24em; }
+
+/* the line under the booking form's button, back to the policies */
+.confirm-note { margin: 14px 0 0; font-size: 11px; font-weight: 300; line-height: 1.7; color: var(--dim); }
+.confirm-note .link-gold { font-size: inherit; letter-spacing: 0; border-bottom: 1px solid var(--gold-line); }
 
 /* panel: one box per policy */
 .pol-admin { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; margin-bottom: 18px; }
 .pol-admin-num { font-family: var(--serif); font-size: 15px; font-weight: 300; color: var(--gold); padding-top: 12px; }
 .pol-admin-fields { display: flex; flex-direction: column; gap: 10px; }
+/* a photographed policy is tall; the panel shows it small */
+.pol-admin .a-img-md.auto { background: none; border: 0; }
+.pol-admin .a-img-md.auto .shot { width: auto; max-width: 100%; max-height: 300px; }
 
 .tail-cta { display: flex; justify-content: center; padding: clamp(44px, 5.5vw, 76px) var(--gutter); }
 .tail-cta .btn { padding: 17px 46px; letter-spacing: .24em; }
@@ -968,28 +1007,20 @@ textarea { resize: vertical; line-height: 1.7; }
 #policies, #hours { scroll-margin-top: 90px; }
 
 /* --- small screens ------------------------------------------------------ */
-/* The nav carries seven links and a button. On anything narrower than a
-   laptop they are tightened rather than left to wrap into a tall header. */
-@media (max-width: 920px) {
-  .nav { gap: 14px; padding: 15px var(--gutter); }
-  .nav-links { gap: 13px 15px; }
-  .nav-link { font-size: 9.5px; letter-spacing: .14em; }
-  .nav-book { padding: 9px 14px; font-size: 9px; letter-spacing: .14em; }
-  .brand-name { font-size: 19px; letter-spacing: .24em; }
-}
-
 @media (max-width: 720px) {
   :root { --gutter: 22px; }
-  .nav { gap: 12px; padding: 13px var(--gutter); }
-  .nav-links { gap: 12px 15px; }
-  .nav-link { font-size: 9.5px; letter-spacing: .15em; }
-  .nav-book { padding: 9px 15px; }
+  /* the sticky header wraps on a phone; keep it short */
+  .nav { gap: 12px; padding: 14px var(--gutter); }
+  .nav-links { gap: 14px 16px; }
+  .nav-link { font-size: 10px; letter-spacing: .17em; }
   .svc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 16px; }
   .gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .footer-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; }
   .looks-grid { grid-template-columns: 1fr; gap: 28px; }
-  .pol-row { grid-template-columns: 1fr; gap: 14px; }
+  .pol-body { grid-template-columns: minmax(0, 1fr); gap: 26px; }
+  .pol-index { position: static; }
+  .pol-tail { flex-direction: column; align-items: flex-start; }
   .gal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lb-nav { padding: 12px 16px; letter-spacing: .14em; }
   .page-head h1 { font-size: 40px; }

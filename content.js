@@ -50,16 +50,19 @@ const DEFAULT_CONTENT = {
     { name: 'Dramatic volume',      price: '', img: '' }
   ],
 
-  // the line under the title on the policies page
-  policiesIntro: '',
-
-  /* Each one is { title, text }. The panel adds and deletes them, so the
-     number of policies is not fixed. An entry with no text stays off the site. */
+  /* Each one is { title, text, img }: a heading, what it says, and a picture
+     of it if the policy is already written out as an image. The panel adds and
+     deletes them, so the number is not fixed, and one with neither text nor a
+     picture stays off the site. */
   policies: [
-    { title: 'Deposits',      text: '' },
-    { title: 'Cancellations', text: '' },
-    { title: 'Travel',        text: '' },
-    { title: 'How to prep',   text: '' }
+    { title: 'Booking retainer policy',        text: '', img: '' },
+    { title: 'Booking retainer policy contd',  text: '', img: '' },
+    { title: 'Cancellation',                   text: '', img: '' },
+    { title: 'No show',                        text: '', img: '' },
+    { title: 'Late arrival',                   text: '', img: '' },
+    { title: 'Guest',                          text: '', img: '' },
+    { title: 'Payment',                        text: '', img: '' },
+    { title: 'Photography & social media policy', text: '', img: '' }
   ],
 
   // each photo is { url, tag } — the tag is a service name, used by the gallery filters
