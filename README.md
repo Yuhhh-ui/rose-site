@@ -100,11 +100,15 @@ Typing saves; leaving the field re-renders. File inputs carry
   through `go()`, so that one line covers the nav button, the service cards and
   every band on the site. The form itself keeps a quiet link back, and Rosé
   reaches the page from the panel.
-  Each policy is `{ title, text, img }` — typed out, photographed, or both — and
+  The panel edits them in their own **Policies** section, which shows how many
+  are ready to be seen. Each policy is `{ title, text, img }` — typed out,
+  photographed, or both — and
   renders as a numbered piece with a sticky index down the side that marks
   whichever one is being read. A heading on its own is one she has not written
   yet, so it stays off the site; with none written at all the booking form
-  opens straight away. Policies saved as a single block of text by an older
+  opens straight away. A list of headings saved by the short-lived first
+  version, with nothing written into any of them, is replaced on load by the
+  headings in `content.js`; anything she has written is never touched. Policies saved as a single block of text by an older
   version are split on their blank lines on load.
 
 ## Saving, for real

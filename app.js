@@ -19,6 +19,7 @@ var SECTIONS = {
   bookings:     'Bookings',
   availability: 'Availability',
   services:     'Services & prices',
+  policies:     'Policies',
   portfolio:    'Portfolio',
   pages:        'Website content',
   reviews:      'Reviews',
@@ -98,6 +99,8 @@ function normaliseGallery() {
   }).filter(function (g) { return g.url; });
 }
 
+var OLD_POLICY_HEADINGS = ['Deposits', 'Cancellations', 'Travel', 'How to prep'];
+
 /* Policies used to be one block of text and are now a list of
    { title, text, img }. An old block is split on its blank lines so nothing
    written before is lost, and a site that never had any starts from the
@@ -112,12 +115,18 @@ function normalisePolicies() {
     return;
   }
   if (!Array.isArray(p)) { state.data.policies = blank().policies; return; }
-  state.data.policies = p.map(function (x) {
+  var list = p.map(function (x) {
     return { title: (x && x.title) || '', text: (x && x.text) || '', img: (x && x.img) || '' };
   });
+  /* A short-lived earlier version saved these four headings with nothing in
+     them. Untouched, they are a leftover default rather than her work, so the
+     headings the site ships with now take their place. */
+  var stale = list.length === OLD_POLICY_HEADINGS.length &&
+    list.every(function (x, i) { return !x.text && !x.img && x.title === OLD_POLICY_HEADINGS[i]; });
+  state.data.policies = stale ? blank().policies : list;
 }
 
-/* Only the ones with something on them \u2014 words, a picture, or both \u2014 reach
+/* Only the ones with something on them — words, a picture, or both — reach
    the website. A heading on its own is one she has not got to yet. */
 function livePolicies() {
   return (state.data.policies || []).filter(function (p) { return p.text || p.img; });
@@ -377,10 +386,10 @@ function flashText(prefix) {
   return state.flash.indexOf(prefix + ':') === 0 ? state.flash.slice(prefix.length + 1) : '';
 }
 
-/* go('services', 'policies') opens the page and scrolls to the element with that id */
+/* go('contact', 'hours') opens a page and scrolls to the element with that id */
 /* The policies are read on the way to booking, once a visit. Every route to
-   the form comes through here \u2014 the nav button, the service cards, the bands
-   at the foot of each page \u2014 so there is one place to send them via the
+   the form comes through here — the nav button, the service cards, the bands
+   at the foot of each page — so there is one place to send them via the
    policies, and one flag that says they have been seen. */
 function go(page, anchor) {
   if (page === 'booking' && !state.readPolicies && livePolicies().length) page = 'policies';
@@ -1027,11 +1036,11 @@ function bookingPage() {
 }
 
 /* The policies, as a page. It is not in the nav: a visitor meets it on the way
-   to booking, which is the moment the wording is about. Ros\u00e9 reaches it from
+   to booking, which is the moment the wording is about. Rosé reaches it from
    the panel, and the booking form keeps a quiet link back to it.
 
    A sticky index down the left side, and each policy as its own numbered
-   piece: a heading, then the policy itself \u2014 typed out, or photographed if
+   piece: a heading, then the policy itself — typed out, or photographed if
    she already has it written somewhere. */
 function policiesPage() {
   var pol = livePolicies();
@@ -1071,7 +1080,7 @@ function policiesPage() {
       : '<section class="pol-empty">' +
           '<p class="empty-hint">' +
             (state.logged
-              ? 'Nothing written yet \u2014 fill the headings in under Website content, by typing them out or adding a picture of each one.'
+              ? 'Nothing written yet \u2014 fill the headings in under Policies, by typing them out or adding a picture of each one.'
               : 'Nothing here yet. Ask away when you book and Ros\u00e9 will talk you through it.') +
           '</p>' +
         '</section>') +
@@ -1205,6 +1214,7 @@ function panel() {
     bookings:     panelBookings,
     availability: panelAvailability,
     services:     panelServices,
+    policies:     panelPolicies,
     portfolio:    panelPortfolio,
     pages:        panelPages,
     reviews:      panelReviews,
@@ -1488,33 +1498,52 @@ function panelPages() {
             '</div>' +
           '</div>';
         }).join('') +
-        '<p class="eyebrow" style="margin-top:12px">POLICIES</p>' +
-        '<p class="empty-text" style="margin:0 0 16px;color:var(--mute-2)">' +
-          'These are shown to a client on the way to the booking form, not as a page anyone browses. ' +
-          'Type each one out, or add a picture of it if you already have it written somewhere \u2014 ' +
-          'both is fine. A heading on its own stays off the website. ' +
-          '<span class="link-gold" data-act="go:policies">See the page \u2192</span></p>' +
-        (d.policies || []).map(function (p, i) {
-          return '<div class="pol-admin">' +
-            '<span class="pol-admin-num">' + pad2(i + 1) + '</span>' +
-            '<div class="pol-admin-fields">' +
-              '<input type="text" value="' + esc(p.title) + '" data-k="policies.' + i + '.title" ' +
-                'placeholder="Heading, e.g. Cancellation">' +
-              '<textarea rows="3" data-k="policies.' + i + '.text" ' +
-                'placeholder="What you want them to know">' + esc(p.text) + '</textarea>' +
-              (p.img ? '<div class="a-img-md frame auto">' + photo(p.img, 'NO PHOTO', true) + '</div>' : '') +
-              '<div class="upload-row">' +
-                '<label class="upload">' + (p.img ? 'CHANGE PICTURE' : 'ADD A PICTURE') +
-                  '<input type="file" accept="image/*" data-upload="policies.' + i + '.img"></label>' +
-                (p.img ? '<span class="remove-link" data-act="clearImg:policies.' + i + '.img">REMOVE PICTURE</span>' : '') +
-              '</div>' +
-              '<span class="remove-link" data-act="delPolicy:' + i + '">DELETE THIS ONE</span>' +
-            '</div>' +
-          '</div>';
-        }).join('') +
-        '<span class="btn-wide" style="margin-top:4px" data-act="addPolicy">+ ADD A POLICY</span>' +
       '</div>' +
     '</div>' +
+  '</div>';
+}
+
+/* Policies have a section to themselves: they are the one thing every client
+   reads, and they were easy to miss at the foot of the website content. */
+function panelPolicies() {
+  var written = livePolicies().length, all = state.data.policies || [];
+
+  var boxes = all.map(function (p, i) {
+    return '<div class="pol-admin">' +
+      '<span class="pol-admin-num">' + pad2(i + 1) + '</span>' +
+      '<div class="pol-admin-fields">' +
+        '<input type="text" value="' + esc(p.title) + '" data-k="policies.' + i + '.title" ' +
+          'placeholder="Heading, e.g. Cancellation">' +
+        '<textarea rows="3" data-k="policies.' + i + '.text" ' +
+          'placeholder="What you want them to know">' + esc(p.text) + '</textarea>' +
+        (p.img ? '<div class="a-img-md frame auto">' + photo(p.img, 'NO PHOTO', true) + '</div>' : '') +
+        '<div class="upload-row">' +
+          '<label class="upload">' + (p.img ? 'CHANGE PICTURE' : 'ADD A PICTURE') +
+            '<input type="file" accept="image/*" data-upload="policies.' + i + '.img"></label>' +
+          (p.img ? '<span class="remove-link" data-act="clearImg:policies.' + i + '.img">REMOVE PICTURE</span>' : '') +
+        '</div>' +
+        '<span class="remove-link" data-act="delPolicy:' + i + '">DELETE THIS ONE</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  return '<div class="main-body">' +
+    '<p class="empty-text" style="margin:0 0 6px;color:var(--mute-2)">' +
+      'A client is shown these on the way to the booking form. They are not a page anyone browses, ' +
+      'and they are not in the menu.</p>' +
+    '<p class="empty-text" style="margin:0 0 18px;color:var(--mute-2)">' +
+      'Type each one out, or add a picture of it if you already have it written somewhere \u2014 both is fine. ' +
+      '<strong>A heading on its own stays off the website</strong>, so nothing below is shown to anyone yet ' +
+      'unless it has words or a picture in it.</p>' +
+    '<p class="conn-line" style="margin:0 0 22px">' +
+      (written
+        ? '<span class="conn-dot on"></span>' + written + ' of ' + all.length +
+          ' ready \u2014 clients see those when they go to book. ' +
+          '<span class="link-gold" data-act="go:policies">See the page \u2192</span>'
+        : '<span class="conn-dot"></span>Nothing written yet, so booking opens straight onto the form.') +
+    '</p>' +
+    (all.length ? boxes : empty('No policies yet', 'Add your first one below.')) +
+    '<span class="btn-wide" style="margin-top:4px" data-act="addPolicy">+ ADD A POLICY</span>' +
   '</div>';
 }
 
