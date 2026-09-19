@@ -74,9 +74,10 @@ Typing saves; leaving the field re-renders. File inputs carry
 - **Photos** — `photo(url, label, natural)` in `app.js` renders every one. They
   are never cropped: the default fits the whole photo inside its frame, and
   `natural` lets the frame take the photo's own shape instead (the caller adds
-  `auto` to the frame). The only place that crops is `.quick-icon`, the six
-  small round badges on the homepage, which are too small to read otherwise.
-  Do not reintroduce `object-fit: cover` anywhere else.
+  `auto` to the frame). The only places that crop are the round frames, where
+  a fitted photo would leave gaps inside the circle: `.quick-icon`,
+  `.svc-card-img` and `.meet-portrait`. Do not reintroduce `object-fit: cover`
+  on any square or rectangular frame.
 - **Cut-out slots** (the hero portrait and the book-with-us figure) fade their
   edges into the sand band, but only for a photo that still has a background.
   `isCutOut()` tells them apart by file type: an upload with see-through parts

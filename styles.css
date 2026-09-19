@@ -253,10 +253,12 @@ textarea { resize: vertical; line-height: 1.7; }
   width: 58px; height: 58px; border-radius: 50%; background: var(--sand-ink);
   display: grid; place-items: center; transition: background-color .28s ease;
 }
-/* The one exception to showing photos whole: these badges are too small for a
-   fitted photo to read, so a picture fills the circle instead. Everywhere else
-   keeps object-fit: contain. */
-.quick-icon .fill { object-fit: cover; }
+/* The exception to showing photos whole: a round frame. A photo fitted inside
+   a circle leaves the background showing at its sides, so the circles fill
+   instead. Every square or rectangular frame keeps object-fit: contain. */
+.quick-icon .fill,
+.svc-card-img .fill,
+.meet-portrait .fill { object-fit: cover; }
 .quick-link:hover .quick-icon { background: var(--ink); }
 .quick-label { font-size: 8.5px; font-weight: 400; letter-spacing: .20em; color: var(--sand-ink-2); text-align: center; }
 
