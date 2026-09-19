@@ -50,6 +50,9 @@ const DEFAULT_CONTENT = {
     { name: 'Dramatic volume',      price: '', img: '' }
   ],
 
+  // the line under the title on the policies page
+  policiesIntro: '',
+
   /* Each one is { title, text }. The panel adds and deletes them, so the
      number of policies is not fixed. An entry with no text stays off the site. */
   policies: [

@@ -11,7 +11,7 @@ functions on the back. No framework, no build step.
 | `styles.css` | All styling. Colours and fonts are variables at the top under `:root`. |
 | `content.js` | The words, services and lash list a fresh site starts with. Safe to edit. |
 | `client.js` | Talks to the server. Decides whether the site is running on Vercel or from disk. |
-| `app.js` | State, the six public pages, and the studio panel. |
+| `app.js` | State, the eight public pages, and the studio panel. |
 | `api/` | The server: one file per thing (content, session, bookings, reviews, messages, upload, reset). |
 | `lib/` | Shared server code: storage, login, photos, notifications. |
 | `dev-server.js` | Runs the whole thing locally with an in-memory store. |
@@ -61,7 +61,7 @@ Clicks are wired with attributes, not inline handlers:
 
 One listener at the top of the page reads `data-act`, splits it on the first
 colon, and calls the matching function in the `actions` object near the bottom
-of `app.js`. `go:services#policies` opens a page and scrolls to an id.
+of `app.js`. `go:contact#hours` opens a page and scrolls to an id.
 
 Text fields carry `data-k="home.headline"` — a dotted path into `state.data`.
 Typing saves; leaving the field re-renders. File inputs carry
@@ -93,12 +93,14 @@ Typing saves; leaving the field re-renders. File inputs carry
 - **Services and lash styles** are a plain list the panel adds to and deletes
   from, so nothing assumes there are four of them. Bookings record the service
   name, not its position, so deleting one leaves past bookings intact.
-- **Policies** are the same shape: a list of `{ title, text }` shown as numbered
-  cards at the foot of the services page. One written as a single block of text
-  by an older version is split on its blank lines on load. A policy with no text
-  stays off the site, and with none written at all the band, the section and the
-  footer link are hidden from visitors — Rosé, signed in, still sees them with a
-  note about where to write them.
+- **Policies** have a page of their own, `policiesPage()`, reached from the nav,
+  the footer and the band on the services page. Each one is `{ title, text }`
+  and renders as a numbered row; `policiesIntro` is the line under the title.
+  One written as a single block of text by an older version is split on its
+  blank lines on load. A policy with no text stays off the site, and with none
+  written at all the nav link, the footer link and the services band are hidden
+  from visitors — Rosé, signed in, still sees them, with a note about where to
+  write them.
 
 ## Saving, for real
 

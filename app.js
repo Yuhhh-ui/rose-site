@@ -56,7 +56,7 @@ var state = {
 
 var KEY = 'rose-studio-v1';
 var FORMS_KEY = 'rose-forms-v1';
-var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'gallery', 'hours', 'brand'];
+var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'policiesIntro', 'gallery', 'hours', 'brand'];
 var FORM_KEYS = ['form', 'rform', 'cform'];
 
 function blank() { return JSON.parse(JSON.stringify(DEFAULT_CONTENT)); }
@@ -428,6 +428,8 @@ function nav() {
       link('gallery', 'GALLERY') +
       link('artist', 'THE ARTIST') +
       link('reviews', 'REVIEWS') +
+      /* nothing written yet: no link to a page with nothing on it */
+      (livePolicies().length || state.logged || state.page === 'policies' ? link('policies', 'POLICIES') : '') +
       link('contact', 'CONTACT') +
       '<span class="nav-book" data-act="go:booking">BOOK</span>' +
     '</nav>' +
@@ -644,35 +646,15 @@ function servicesPage() {
       '<div class="lash-grid">' + lashes + '</div>' +
     '</section>' +
 
-    /* Nothing written yet: a visitor is not shown a band that leads nowhere.
-       Rosé herself still sees it, with the note about where to write them. */
+    /* The policies have a page of their own; this band is the way to it.
+       With nothing written yet a visitor is not sent somewhere empty. */
     (pol.length || state.logged
-      ? '<section class="policy-band" data-act="go:services#policies">' +
+      ? '<section class="policy-band" data-act="go:policies">' +
           '<div class="policy-band-copy">' +
             '<span class="policy-band-label">BEFORE YOU BOOK</span>' +
             '<h3>Deposits, timing, travel and touch-ups.</h3>' +
           '</div>' +
           '<span class="policy-band-link">READ THE POLICIES →</span>' +
-        '</section>'
-      : '') +
-
-    (pol.length || state.logged
-      ? '<section class="policies" id="policies">' +
-          '<div class="pol-head">' +
-            '<p class="eyebrow">GOOD TO KNOW</p>' +
-            '<h3 class="pol-title">Before you book</h3>' +
-          '</div>' +
-          (pol.length
-            ? '<div class="pol-grid">' + pol.map(function (p, i) {
-                return '<article class="pol-item">' +
-                  '<span class="pol-num">' + pad2(i + 1) + '</span>' +
-                  '<div class="pol-copy">' +
-                    (p.title ? '<h4 class="pol-name">' + esc(p.title) + '</h4>' : '') +
-                    '<p class="pol-text">' + esc(p.text) + '</p>' +
-                  '</div>' +
-                '</article>';
-              }).join('') + '</div>'
-            : '<p class="empty-hint">Your policies will appear here — write them in the studio panel under Website content.</p>') +
         '</section>'
       : '') +
 
@@ -1032,6 +1014,52 @@ function bookingPage() {
   '</div>';
 }
 
+/* A page of its own, linked from the nav, the footer and the services band.
+   Each policy is one row: its number and heading on the left, what it says on
+   the right, so it reads down the page the way a printed sheet would. */
+function policiesPage() {
+  var d = state.data, pol = livePolicies();
+
+  var rows = pol.map(function (p, i) {
+    return '<article class="pol-row">' +
+      '<div class="pol-row-head">' +
+        '<span class="pol-num">' + pad2(i + 1) + '</span>' +
+        '<h2 class="pol-name">' + esc(p.title || 'Good to know') + '</h2>' +
+      '</div>' +
+      '<p class="pol-text">' + esc(p.text) + '</p>' +
+    '</article>';
+  }).join('');
+
+  return '<div class="page pol-page">' +
+    '<section class="pol-hero">' +
+      '<span class="script">Good to know</span>' +
+      '<h1 class="pol-page-title">Policies</h1>' +
+      (d.policiesIntro
+        ? '<p class="pol-lead">' + esc(d.policiesIntro) + '</p>'
+        : '<p class="pol-lead">A few things worth knowing before your appointment.</p>') +
+    '</section>' +
+
+    (pol.length
+      ? '<section class="pol-list">' + rows + '</section>'
+      : '<section class="pol-empty">' +
+          '<p class="empty-hint">' +
+            (state.logged
+              ? 'Nothing written yet \u2014 add your policies in the studio panel under Website content.'
+              : 'Nothing here yet. Ask away when you book and Ros\u00e9 will talk you through it.') +
+          '</p>' +
+        '</section>') +
+
+    '<section class="pol-tail">' +
+      '<span class="script">Still wondering?</span>' +
+      '<p class="pol-tail-copy">Anything not answered here, just ask \u2014 it is no trouble at all.</p>' +
+      '<div class="pol-tail-btns">' +
+        '<span class="btn" data-act="go:booking">BOOK AN APPOINTMENT</span>' +
+        '<span class="btn-line" data-act="go:contact">ASK A QUESTION</span>' +
+      '</div>' +
+    '</section>' +
+  '</div>';
+}
+
 function contactPage() {
   var d = state.data;
 
@@ -1093,7 +1121,7 @@ function footer() {
       '<div class="foot-col">' +
         '<span class="foot-label">GOOD TO KNOW</span>' +
         (livePolicies().length || state.logged
-          ? '<span class="foot-link" data-act="go:services#policies">Policies</span>' : '') +
+          ? '<span class="foot-link" data-act="go:policies">Policies</span>' : '') +
         '<span class="foot-link" data-act="go:contact#hours">Opening hours</span>' +
       '</div>' +
       '<div class="foot-col">' +
@@ -1434,9 +1462,12 @@ function panelPages() {
             '</div>' +
           '</div>';
         }).join('') +
-        '<p class="eyebrow" style="margin-top:12px">SERVICES PAGE — GOOD TO KNOW</p>' +
+        '<p class="eyebrow" style="margin-top:12px">THE POLICIES PAGE</p>' +
         '<p class="empty-text" style="margin:0 0 16px;color:var(--mute-2)">' +
-          'One box per policy. Anything left blank stays off the website.</p>' +
+          'One box per policy, shown on their own page. Anything left blank stays off the website.</p>' +
+        '<div class="field"><span class="field-label">The line under the title</span>' +
+          '<input type="text" value="' + esc(d.policiesIntro || '') + '" data-k="policiesIntro" ' +
+            'placeholder="A few things worth knowing before your appointment."></div>' +
         (d.policies || []).map(function (p, i) {
           return '<div class="pol-admin">' +
             '<span class="pol-admin-num">' + pad2(i + 1) + '</span>' +
@@ -1615,6 +1646,7 @@ function render() {
     if (state.page === 'artist')   html += artistPage();
     if (state.page === 'reviews')  html += reviewsPage();
     if (state.page === 'booking')  html += bookingPage();
+    if (state.page === 'policies') html += policiesPage();
     if (state.page === 'contact')  html += contactPage();
     html += footer();
   }
