@@ -25,7 +25,10 @@ export default async function handler(req, res) {
       if (!c || typeof c !== 'object') return fail(res, 400, 'No content');
       var keep = {};
       KEYS.forEach(function (k) { if (c[k] !== undefined) keep[k] = c[k]; });
-      if (JSON.stringify(keep).length > MAX_BYTES) return fail(res, 413, 'Too large. Photos should be uploaded, not pasted.');
+      if (JSON.stringify(keep).length > MAX_BYTES) {
+        return fail(res, 413, 'The site content has grown too large to save. This happens when photos are ' +
+          'stored inside it instead of in Blob storage — check Settings → Connections.');
+      }
       await putContent(keep);
       return send(res, 200, { ok: true });
     }

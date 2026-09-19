@@ -1861,17 +1861,55 @@ app.addEventListener('change', function (e) {
 
 /* --- image uploads ------------------------------------------------------ */
 
+/* How big an upload may get once encoded. The server allows more, so this
+   leaves room to spare rather than sailing close to the limit. */
+var UPLOAD_BUDGET = 1.2 * 1024 * 1024;
+
+function dataUrlBytes(u) {
+  var i = u.indexOf(',');
+  return i < 0 ? u.length : Math.round((u.length - i - 1) * 0.75);
+}
+
+/* Is any part of this picture see-through? Sampled rather than scanned, which
+   is plenty to tell a cut-out from an ordinary photograph. */
+function isTransparent(canvas) {
+  try {
+    var d = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+    var step = Math.max(4, Math.floor(d.length / 4 / 20000) * 4);
+    for (var i = 3; i < d.length; i += step) if (d[i] < 250) return true;
+  } catch (e) { /* a picture the page may not read back; treat it as opaque */ }
+  return false;
+}
+
 /* Photos are shrunk in the browser before they go anywhere.
-   max: longest side in px. png: keep transparency (logos, cut-outs) instead of flattening to jpeg */
-function shrink(url, done, max, png) {
+
+   max: longest side in pixels.
+   allowPng: this slot can hold a cut-out, so keep transparency IF the picture
+   actually has any. A photograph saved as a PNG is opaque, and re-encoding it
+   as a PNG makes a file many times larger than an upload allows, which is what
+   used to make the hero and cut-out uploads fail. Either way the picture is
+   made smaller until it fits, so a big photo from a phone always goes through. */
+function shrink(url, done, max, allowPng) {
   var img = new Image();
   img.onload = function () {
-    var scale = Math.min(1, (max || 1200) / Math.max(img.width, img.height));
-    var c = document.createElement('canvas');
-    c.width = Math.round(img.width * scale);
-    c.height = Math.round(img.height * scale);
-    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-    done(png ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.82));
+    var draw = function (limit) {
+      var scale = Math.min(1, limit / Math.max(img.width, img.height));
+      var c = document.createElement('canvas');
+      c.width  = Math.max(1, Math.round(img.width * scale));
+      c.height = Math.max(1, Math.round(img.height * scale));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      return c;
+    };
+
+    var limit = max || 1200;
+    var keepPng = allowPng && isTransparent(draw(limit));
+
+    for (var i = 0; i < 7; i++) {
+      var c = draw(limit);
+      var out = keepPng ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', i > 2 ? 0.72 : 0.82);
+      if (dataUrlBytes(out) <= UPLOAD_BUDGET || limit <= 360) { done(out); return; }
+      limit = Math.round(limit * 0.75);
+    }
   };
   img.onerror = function () { done(url); };
   img.src = url;
@@ -1884,7 +1922,8 @@ function handleUpload(input) {
   if (!file || !path) return;
 
   var icon = path.indexOf('home.quickIcons.') === 0;
-  var png  = file.type === 'image/png' && /^home\.(quickIcons|heroImg|ctaImg)/.test(path);
+  /* Any PNG may be a cut-out or a logo; whether it really is decides the format. */
+  var allowPng = file.type === 'image/png';
 
   var place = function (url) {
     if (path === 'gallery') { state.data.gallery.unshift({ url: url, tag: '' }); save(); }
@@ -1899,9 +1938,12 @@ function handleUpload(input) {
       if (!API.remote || path === 'rform.img') { place(dataUrl); return; }
       setSaveNote('Uploading photo…');
       API.post('/api/upload', { data: dataUrl })
-        .then(function (r) { place(r.url); })
-        .catch(function (e) { flash('inbox-error:' + e.message); });
-    }, icon ? 320 : path === 'rform.img' ? 900 : 1200, png);
+        .then(function (r) { setSaveNote('Saved'); place(r.url); })
+        .catch(function (e) {
+          flash('inbox-error:' + e.message);
+          window.scrollTo(0, 0);   // the message sits at the top of the panel
+        });
+    }, icon ? 320 : path === 'rform.img' ? 900 : 1200, allowPng);
   };
   reader.readAsDataURL(file);
 }

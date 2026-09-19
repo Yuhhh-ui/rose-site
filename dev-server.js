@@ -12,6 +12,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 process.env.ROSE_MEMORY_STORE = process.env.ROSE_MEMORY_STORE || '1';
+process.env.ROSE_INLINE_PHOTOS = process.env.ROSE_INLINE_PHOTOS || '1';
 process.env.STUDIO_PASSWORD = process.env.STUDIO_PASSWORD || 'rose';
 
 const ROOT = path.dirname(new URL(import.meta.url).pathname);
