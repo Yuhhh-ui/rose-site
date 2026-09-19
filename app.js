@@ -219,6 +219,13 @@ function money(v) {
   return v.charAt(0) === '$' ? v : '$' + v;
 }
 
+/* A picture kept as a PNG is one that had see-through parts, so it is already
+   cut out and needs no help blending. A JPEG came from a camera and carries
+   whatever wall was behind the subject. */
+function isCutOut(url) {
+  return /^data:image\/png/i.test(url) || /\.png(\?|$)/i.test(url);
+}
+
 /* Photo frame contents: the image, or a labelled placeholder.
 
    Nothing is ever cropped. A normal photo is fitted whole inside its frame,
@@ -470,9 +477,9 @@ function homePage() {
           '<span class="btn-dark" data-act="go:booking">BOOK NOW</span>' +
         '</div>' +
         '<div class="hero-figure">' +
-          '<div class="hero-portrait cutout' + (h.heroImg ? ' has-img' : '') + '">' +
+          '<div class="hero-portrait cutout' + (h.heroImg ? ' has-img auto' + (isCutOut(h.heroImg) ? '' : ' soft') : '') + '">' +
             (h.heroImg
-              ? photo(h.heroImg, '')
+              ? photo(h.heroImg, '', true)
               : '<div class="ph"><span class="ph-label">HERO PORTRAIT<br><small>cut-out works best</small></span></div>') +
           '</div>' +
         '</div>' +
@@ -526,7 +533,8 @@ function homePage() {
       '<div class="bookband-stack">' +
         '<div class="bookband-words" aria-hidden="true">' + repeat + '</div>' +
         '<div class="bookband-figure">' +
-          '<div class="bookband-cutout cutout' + (h.ctaImg ? ' has-img' : '') + '">' + photo(h.ctaImg, 'CUT-OUT PORTRAIT') + '</div>' +
+          '<div class="bookband-cutout cutout' + (h.ctaImg ? ' has-img auto' + (isCutOut(h.ctaImg) ? '' : ' soft') : '') + '">' +
+            photo(h.ctaImg, 'CUT-OUT PORTRAIT', !!h.ctaImg) + '</div>' +
         '</div>' +
       '</div>' +
       '<div class="bookband-cta">' +

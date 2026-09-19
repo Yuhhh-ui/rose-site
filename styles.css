@@ -192,6 +192,21 @@ textarea { resize: vertical; line-height: 1.7; }
 .cutout .fill { object-fit: contain; object-position: bottom center; }
 .cutout.has-img { background: transparent !important; border: 0 !important; }
 
+/* A photo taken against a plain studio wall arrives as a hard-edged rectangle
+   sitting on top of the band. Fading it out towards the edges lets the wall
+   fall away and the subject sit in the band instead. Only photos that still
+   carry a background get this: a picture uploaded with see-through parts is
+   already cut out, keeps its own edges, and is left alone. */
+.cutout.has-img.soft .shot,
+.cutout.has-img.soft .fill {
+  -webkit-mask-image: radial-gradient(ellipse 60% 85% at 50% 47%, #000 38%, rgba(0, 0, 0, 0) 100%);
+          mask-image: radial-gradient(ellipse 60% 85% at 50% 47%, #000 38%, rgba(0, 0, 0, 0) 100%);
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
+}
+
 .btn-dark {
   cursor: pointer; display: inline-block;
   padding: 17px 46px; background: var(--sand-ink); color: var(--cream);
@@ -314,6 +329,7 @@ textarea { resize: vertical; line-height: 1.7; }
 }
 .bookband-figure { grid-area: 1 / 1; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; }
 .bookband-cutout { position: relative; width: clamp(180px, 26vw, 300px); height: 88%; background: var(--sand-ink); border: 1px solid rgba(243, 235, 225, .25); }
+.bookband-cutout.auto { align-self: flex-end; }
 .bookband-cutout .ph-label { color: var(--cream); }
 .bookband-cta { display: flex; justify-content: center; margin-top: clamp(28px, 4vw, 46px); }
 

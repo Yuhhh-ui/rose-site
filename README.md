@@ -77,6 +77,11 @@ Typing saves; leaving the field re-renders. File inputs carry
   `auto` to the frame). The only place that crops is `.quick-icon`, the six
   small round badges on the homepage, which are too small to read otherwise.
   Do not reintroduce `object-fit: cover` anywhere else.
+- **Cut-out slots** (the hero portrait and the book-with-us figure) fade their
+  edges into the sand band, but only for a photo that still has a background.
+  `isCutOut()` tells them apart by file type: an upload with see-through parts
+  is kept as a PNG and left alone, an ordinary photo becomes a JPEG and is
+  softened.
 - **Gallery photos** — each is `{ url, tag }`, the tag being a service name.
   Tags drive the filter chips, and only tags that have photos are offered.
   Photos saved as plain strings by an older version are lifted on load.
