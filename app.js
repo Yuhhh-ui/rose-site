@@ -45,7 +45,9 @@ var state = {
   inboxAt: 0,          // when bookings, reviews and messages were last fetched
   notifyTest: null,    // result of Settings → Send a test alert
   lastBooking: null,   // the booking just sent, for the WhatsApp link on the confirmation
-  readPolicies: false  // the policies have been shown on the way to the form this visit
+  readPolicies: false, // the policies have been shown on the way to the form this visit
+  polAt: null,         // a policy picked from the index, while it is still on screen
+  polAtAt: 0           // when it was picked, to ride out the scroll to it
 };
 
 /* --- storage ------------------------------------------------------------ */
@@ -1755,13 +1757,32 @@ function watchPolicyIndex() {
   window.addEventListener('scroll', markPolicy, { passive: true });
 }
 
+function onScreen(el) {
+  var r = el.getBoundingClientRect();
+  return r.bottom > 80 && r.top < window.innerHeight - 40;
+}
+
 function markPolicy() {
   var items = document.querySelectorAll('.pol-item');
   var links = document.querySelectorAll('.pol-index-item');
   if (!items.length || !links.length) return;
-  var at = 0;
-  for (var i = 0; i < items.length; i++) {
-    if (items[i].getBoundingClientRect().top <= 160) at = i;
+
+  /* One picked from the index stays marked while it is still on screen. In two
+     columns there is no single "current" policy to work out from the scroll
+     position alone, so otherwise it is whichever heading sits nearest the top
+     of the reading area. */
+  var at = -1;
+  /* the scroll to it is animated, so it is not on screen for the first moment */
+  var justPicked = state.polAt != null && Date.now() - state.polAtAt < 1400;
+  if (state.polAt != null && items[state.polAt] && (justPicked || onScreen(items[state.polAt]))) {
+    at = state.polAt;
+  } else {
+    state.polAt = null;
+    var best = Infinity;
+    for (var i = 0; i < items.length; i++) {
+      var d = Math.abs(items[i].getBoundingClientRect().top - 160);
+      if (d < best) { best = d; at = i; }
+    }
   }
   for (var j = 0; j < links.length; j++) links[j].classList.toggle('on', j === at);
 }
@@ -1805,7 +1826,11 @@ var actions = {
   policiesRead: function () { state.readPolicies = true; go('booking'); },
   polJump: function (i) {
     var el = document.getElementById('pol-' + Number(i));
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
+    if (!el) return;
+    state.polAt = Number(i);
+    state.polAtAt = Date.now();
+    markPolicy();
+    el.scrollIntoView({ behavior: 'smooth' });
   },
   sec:     function (s) { goSection(s); },
 

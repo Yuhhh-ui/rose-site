@@ -106,7 +106,10 @@ Typing saves; leaving the field re-renders. File inputs carry
   are ready to be seen. Each policy is `{ title, text, img }` — typed out,
   photographed, or both — and
   renders as a numbered piece with a sticky index down the side that marks
-  whichever one is being read. A heading on its own is one she has not written
+  whichever one is being read. They run in two columns on a wide screen and
+  one below 1100px — CSS columns rather than a grid, since a policy with a
+  photograph is far taller than one without and a grid would leave the space
+  beside it empty. A heading on its own is one she has not written
   yet, so it stays off the site; with none written at all the booking form
   opens straight away. A list of headings saved by the short-lived first
   version, with nothing written into any of them, is replaced on load by the
