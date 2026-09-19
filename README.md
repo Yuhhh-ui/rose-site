@@ -84,6 +84,9 @@ Typing saves; leaving the field re-renders. File inputs carry
   write a `panelXxx()` function, add it to the lookup object in `panel()`.
 - **Change colours or type** — `:root` in `styles.css`.
 - **Change the starting copy** — `content.js`.
+- **Services and lash styles** are a plain list the panel adds to and deletes
+  from, so nothing assumes there are four of them. Bookings record the service
+  name, not its position, so deleting one leaves past bookings intact.
 
 ## Saving, for real
 

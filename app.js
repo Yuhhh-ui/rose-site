@@ -1259,6 +1259,7 @@ function panelServices() {
           '<span class="a-toggle-label">' + (s.live ? 'On the site' : 'Hidden') + '</span>' +
           '<span class="a-toggle" data-act="toggle:services.' + i + '.live">TOGGLE</span>' +
         '</div>' +
+        '<span class="remove-link" data-act="delService:' + i + '">DELETE THIS SERVICE</span>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -1270,15 +1271,22 @@ function panelServices() {
       '<input type="text" value="' + esc(l.price) + '" data-k="lashes.' + i + '.price" placeholder="Add-on price">' +
       '<div class="upload-row">' +
         '<label class="upload">UPLOAD<input type="file" accept="image/*" data-upload="lashes.' + i + '.img"></label>' +
-        '<span class="remove-link" data-act="clearImg:lashes.' + i + '.img">REMOVE</span>' +
+        '<span class="remove-link" data-act="clearImg:lashes.' + i + '.img">REMOVE PHOTO</span>' +
       '</div>' +
+      '<span class="remove-link" data-act="delLash:' + i + '">DELETE THIS STYLE</span>' +
     '</div>';
   }).join('');
 
   return '<div class="main-body">' +
-    '<div class="stack-wide">' + svcs + '</div>' +
+    '<p class="empty-text" style="margin-bottom:18px;color:var(--mute-2)">' +
+      'Add as many services as you like. Anything switched to Hidden stays here but comes off the website.</p>' +
+    (state.data.services.length
+      ? '<div class="stack-wide">' + svcs + '</div>'
+      : empty('No services yet', 'Add your first one below.')) +
+    '<span class="btn-wide" data-act="addService">+ ADD A SERVICE</span>' +
     '<p class="eyebrow" style="margin:40px 0 16px;font-size:9px;letter-spacing:.26em">LASHES</p>' +
-    '<div class="lash-admin-grid">' + lashes + '</div>' +
+    (state.data.lashes.length ? '<div class="lash-admin-grid">' + lashes + '</div>' : '') +
+    '<span class="btn-wide" style="margin-top:16px" data-act="addLash">+ ADD A LASH STYLE</span>' +
   '</div>';
 }
 
@@ -1286,7 +1294,10 @@ function panelPortfolio() {
   var g = state.data.gallery;
   var names = liveServices().map(function (x) { return x.s.name; });
   var tiles = g.map(function (item, i) {
-    var opts = ['<option value="">No tag</option>'].concat(names.map(function (n) {
+    /* keep a tag that no longer matches a service, so renaming one does not wipe it */
+    var choices = names.slice();
+    if (item.tag && choices.indexOf(item.tag) < 0) choices.push(item.tag);
+    var opts = ['<option value="">No tag</option>'].concat(choices.map(function (n) {
       return '<option value="' + esc(n) + '"' + (item.tag === n ? ' selected' : '') + '>' + esc(n) + '</option>';
     })).join('');
     return '<div class="gal-admin">' +
@@ -1692,6 +1703,28 @@ var actions = {
     submit('/api/messages', item, function () { state.data.messages.unshift(item); }, 'message-sent');
     state.data.cform = { name: '', email: '', topic: '', message: '' };
     saveForms();
+  },
+
+  /* panel — services and lashes */
+  addService: function () {
+    state.data.services.push({ name: 'New service', dur: '', price: '', desc: '', img: '', live: true });
+    save(); render();
+  },
+  delService: function (i) {
+    var s = state.data.services[Number(i)];
+    if (!window.confirm('Delete "' + (s.name || 'this service') + '"? Bookings already taken for it are not affected.')) return;
+    state.data.services.splice(Number(i), 1);
+    save(); render();
+  },
+  addLash: function () {
+    state.data.lashes.push({ name: 'New lash style', price: '', img: '' });
+    save(); render();
+  },
+  delLash: function (i) {
+    var l = state.data.lashes[Number(i)];
+    if (!window.confirm('Delete "' + (l.name || 'this style') + '"?')) return;
+    state.data.lashes.splice(Number(i), 1);
+    save(); render();
   },
 
   /* panel — content */
