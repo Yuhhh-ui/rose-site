@@ -98,8 +98,10 @@ Typing saves; leaving the field re-renders. File inputs carry
   them to the policies first, once a visit, and `policiesRead` sets
   `state.readPolicies` and carries on to the form. Every route to the form goes
   through `go()`, so that one line covers the nav button, the service cards and
-  every band on the site. The form itself keeps a quiet link back, and Rosé
-  reaches the page from the panel.
+  every band on the site. **Agree & continue** sits at the top of the page,
+  beside the title, so nobody has to scroll past eight policies to reach the
+  form; the foot of the page offers a question instead. The form itself keeps a
+  quiet link back, and Rosé reaches the page from the panel.
   The panel edits them in their own **Policies** section, which shows how many
   are ready to be seen. Each policy is `{ title, text, img }` — typed out,
   photographed, or both — and

@@ -1069,7 +1069,11 @@ function policiesPage() {
         '<span class="script">Before you book</span>' +
         '<h1 class="pol-page-title">Policies</h1>' +
       '</div>' +
-      (pol.length ? '<span class="pol-count">' + pol.length + ' THING' + (pol.length === 1 ? '' : 'S') + ' TO KNOW</span>' : '') +
+      '<div class="pol-hero-do">' +
+        (pol.length ? '<span class="pol-count">' + pol.length + ' THING' + (pol.length === 1 ? '' : 'S') + ' TO KNOW</span>' : '') +
+        '<span class="btn pol-go" data-act="policiesRead">AGREE &amp; CONTINUE</span>' +
+        '<span class="pol-go-note">Booking a date confirms you have read these.</span>' +
+      '</div>' +
     '</section>' +
 
     (pol.length
@@ -1085,13 +1089,13 @@ function policiesPage() {
           '</p>' +
         '</section>') +
 
+    /* the way on is at the top; down here is the way to ask instead */
     '<section class="pol-tail">' +
       '<div class="pol-tail-copy">' +
         '<span class="pol-tail-label">STILL UNSURE?</span>' +
         '<h3 class="pol-tail-title">Message me and I will talk it through.</h3>' +
-        '<span class="pol-tail-note">Booking a date confirms you have read these.</span>' +
       '</div>' +
-      '<span class="btn pol-tail-btn" data-act="policiesRead">BOOK AN APPOINTMENT</span>' +
+      '<span class="btn-line pol-tail-btn" data-act="go:contact">ASK A QUESTION</span>' +
     '</section>' +
   '</div>';
 }

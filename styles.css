@@ -423,6 +423,11 @@ textarea { resize: vertical; line-height: 1.7; }
   line-height: .92; font-weight: 400; letter-spacing: .015em; text-transform: uppercase;
 }
 .pol-count { font-size: 9.5px; font-weight: 300; letter-spacing: .34em; color: var(--dim); }
+/* the way on sits at the top, beside the title, so nobody has to scroll to
+   the end of eight policies to get to the form */
+.pol-hero-do { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; text-align: right; }
+.pol-go { padding: 16px 34px; font-weight: 500; letter-spacing: .24em; }
+.pol-go-note { font-size: 11px; font-weight: 300; color: var(--dim); max-width: 260px; }
 
 .pol-body {
   display: grid; grid-template-columns: clamp(150px, 16vw, 210px) minmax(0, 1fr);
@@ -480,7 +485,7 @@ textarea { resize: vertical; line-height: 1.7; }
   font-weight: 300; color: var(--cream);
 }
 .pol-tail-note { font-size: 11px; font-weight: 300; color: var(--dim); }
-.pol-tail-btn { padding: 16px 34px; font-weight: 500; letter-spacing: .24em; }
+.pol-tail-btn { padding: 16px 34px; letter-spacing: .24em; }
 
 /* the line under the booking form's button, back to the policies */
 .confirm-note { margin: 14px 0 0; font-size: 11px; font-weight: 300; line-height: 1.7; color: var(--dim); }
@@ -1023,6 +1028,7 @@ textarea { resize: vertical; line-height: 1.7; }
   .pol-body { grid-template-columns: minmax(0, 1fr); gap: 26px; }
   .pol-index { position: static; }
   .pol-tail { flex-direction: column; align-items: flex-start; }
+  .pol-hero-do { align-items: flex-start; text-align: left; }
   .gal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lb-nav { padding: 12px 16px; letter-spacing: .14em; }
   .page-head h1 { font-size: 40px; }
