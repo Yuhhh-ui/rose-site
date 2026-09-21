@@ -999,11 +999,13 @@ function bookingPage() {
     '<section class="step">' +
       '<div class="step-head"><span class="step-num">STEP 03</span><h2 class="step-title">Your details</h2></div>' +
       '<div class="detail-grid">' +
-        '<input type="text" value="' + esc(d.form.name) + '" data-k="form.name" placeholder="Full name">' +
-        '<input type="text" value="' + esc(d.form.contact) + '" data-k="form.contact" placeholder="Phone / WhatsApp">' +
-        '<input type="text" value="' + esc(d.form.email) + '" data-k="form.email" placeholder="Email">' +
-        '<input type="text" value="' + esc(d.form.occasion) + '" data-k="form.occasion" placeholder="Occasion">' +
+        '<input type="text" value="' + esc(d.form.name) + '" data-k="form.name" placeholder="Full name *">' +
+        '<input type="tel" value="' + esc(d.form.contact) + '" data-k="form.contact" placeholder="Phone / WhatsApp *">' +
+        '<input type="text" value="' + esc(d.form.email) + '" data-k="form.email" placeholder="Email (optional)">' +
+        '<input type="text" value="' + esc(d.form.occasion) + '" data-k="form.occasion" placeholder="Occasion (optional)">' +
       '</div>' +
+      '<p class="form-note" style="margin-top:10px">' +
+        '* Your name and a number to reach you on. Ros\u00e9 confirms every appointment by WhatsApp.</p>' +
       '<textarea rows="3" data-k="form.notes" style="margin-top:16px" ' +
         'placeholder="Anything I should know? Allergies, inspiration, where you&#39;ll be getting ready">' +
         esc(d.form.notes) + '</textarea>' +
@@ -1024,7 +1026,7 @@ function bookingPage() {
         '<span class="btn-confirm' + (state.sending ? ' busy' : '') + '" data-act="sendBooking">' +
           (state.sending ? 'SENDING…' : 'REQUEST THIS APPOINTMENT') + '</span>' +
         (state.flash === 'booking-error'
-          ? '<p class="err">Add your name, a service, a date and a time first.</p>' : '') +
+          ? '<p class="err">Add a service, a date, a time, your name and a number to reach you on.</p>' : '') +
         (state.flash === 'booking-past'
           ? '<p class="err">That date has already passed. Please pick another.</p>' : '') +
         (flashText('send-error') ? '<p class="err">Could not send: ' + esc(flashText('send-error')) + '</p>' : '') +
@@ -1888,7 +1890,7 @@ var actions = {
 
   sendBooking: function () {
     var f = state.data.form;
-    if (!f.name || !f.svc || !isIso(f.date) || !f.time) { flash('booking-error'); return; }
+    if (!f.name || !f.contact || !f.svc || !isIso(f.date) || !f.time) { flash('booking-error'); return; }
     if (isoToDate(f.date) < todayStart()) { flash('booking-past'); return; }
     var item = {
       id: 'b' + Date.now(), at: Date.now(),

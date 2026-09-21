@@ -177,7 +177,7 @@ All JSON. "studio" means the session cookie from logging in is required.
 |---|---|
 | `/api/session` | `GET` am I logged in · `POST {password}` · `DELETE` |
 | `/api/content` | `GET` the site + published reviews · `PUT {content}` studio |
-| `/api/bookings` | `POST` new request · `GET` studio · `PATCH {id,status}` studio · `DELETE {id}` or `{clear:true}` studio |
+| `/api/bookings` | `POST` new request (name, contact, service, date and time required) · `GET` studio · `PATCH {id,status}` studio · `DELETE {id}` or `{clear:true}` studio |
 | `/api/reviews` | `GET` published (all, for studio) · `POST {name,text,img}` · `PATCH {id,published}` or `{id,featured:true}` studio · `DELETE {id}` studio |
 | `/api/messages` | `POST` (name, phone and message required) · `GET` studio · `DELETE {id}` studio |
 | `/api/upload` | `POST {data}` studio → `{url}` |

@@ -1,5 +1,6 @@
 /* Booking requests.
    POST   public  { name, contact, email, occasion, notes, service, date, time, place }
+                  name, contact, service, date and time required
    GET    studio  -> { items }
    PATCH  studio  { id, status }          pending | confirmed | completed | cancelled
    DELETE studio  { id }  or  { clear: true }   clear removes completed and cancelled   */
@@ -30,7 +31,9 @@ export default async function handler(req, res) {
         time:     clean(b.time, 40),
         place:    clean(b.place, 60) || 'Studio'
       };
-      if (!item.name || !item.service || !item.date || !item.time) return fail(res, 400, 'Add your name, a service, a date and a time first.');
+      if (!item.name || !item.contact || !item.service || !item.date || !item.time) {
+        return fail(res, 400, 'Add a service, a date, a time, your name and a number to reach you on.');
+      }
       await putItem('bookings', item);
       await notify('New booking request from ' + item.name, bookingText(item));
       return send(res, 200, { ok: true, id: item.id });
