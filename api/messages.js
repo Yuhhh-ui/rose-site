@@ -1,5 +1,5 @@
 /* Contact-page messages.
-   POST   public  { name, email, topic, message }
+   POST   public  { name, phone, email, topic, message }  name, phone and message required
    GET    studio  -> { items }
    DELETE studio  { id }                                                          */
 
@@ -17,14 +17,17 @@ export default async function handler(req, res) {
       var item = {
         id: id('m'), at: Date.now(), read: false,
         name:    clean(b.name, 120),
+        phone:   clean(b.phone, 60),
         email:   clean(b.email, 160),
         topic:   clean(b.topic, 160),
         message: clean(b.message, 3000)
       };
-      if (!item.name || !item.message) return fail(res, 400, 'Add your name and a message.');
+      if (!item.name || !item.phone || !item.message) {
+        return fail(res, 400, 'Add your name, a number to reach you on, and a message.');
+      }
       await putItem('messages', item);
       await notify('New message from ' + item.name + (item.topic ? ': ' + item.topic : ''),
-        item.message + '\n\nReply to: ' + (item.email || 'no contact given'));
+        item.message + '\n\nReply to: ' + item.phone + (item.email ? ' / ' + item.email : ''));
       return send(res, 200, { ok: true, id: item.id });
     }
 

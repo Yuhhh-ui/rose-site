@@ -1117,11 +1117,15 @@ function contactPage() {
     '<section class="contact-grid">' +
       '<div class="contact-form">' +
         '<h2>Write to me</h2>' +
-        '<input type="text" value="' + esc(d.cform.name) + '" data-k="cform.name" placeholder="Your name">' +
-        '<input type="text" value="' + esc(d.cform.email) + '" data-k="cform.email" placeholder="Email or WhatsApp">' +
+        '<input type="text" value="' + esc(d.cform.name) + '" data-k="cform.name" placeholder="Your name *">' +
+        '<input type="tel" value="' + esc(d.cform.phone) + '" data-k="cform.phone" placeholder="Phone or WhatsApp number *">' +
+        '<input type="text" value="' + esc(d.cform.email) + '" data-k="cform.email" placeholder="Email (optional)">' +
         '<input type="text" value="' + esc(d.cform.topic) + '" data-k="cform.topic" placeholder="What can I help with?">' +
-        '<textarea rows="5" data-k="cform.message" placeholder="Your message">' + esc(d.cform.message) + '</textarea>' +
+        '<textarea rows="5" data-k="cform.message" placeholder="Your message *">' + esc(d.cform.message) + '</textarea>' +
+        '<span class="form-note">* Name, number and message are needed so Rosé can reply.</span>' +
         '<span class="btn-msg" data-act="sendMessage">SEND MESSAGE</span>' +
+        (state.flash === 'message-error'
+          ? '<p class="err">Add your name, a number to reach you on, and a message.</p>' : '') +
         (state.flash === 'message-sent' ? '<p class="ok">Sent — it is in the studio inbox.</p>' : '') +
         (state.flash === 'sending' ? '<p class="form-note">Sending…</p>' : '') +
         (flashText('send-error') ? '<p class="err">Could not send: ' + esc(flashText('send-error')) + '</p>' : '') +
@@ -1615,7 +1619,9 @@ function panelMessages() {
     return '<div class="m-card">' +
       '<div class="m-head">' +
         '<span class="m-topic">' + esc(m.topic || 'No subject') + '</span>' +
-        '<span class="m-from">' + esc(m.name) + ' · ' + esc(m.email || '—') + '</span>' +
+        '<span class="m-from">' + esc(m.name) +
+          (m.phone ? ' · ' + esc(m.phone) : '') +
+          (m.email ? ' · ' + esc(m.email) : '') + '</span>' +
       '</div>' +
       '<p class="m-body">' + esc(m.message) + '</p>' +
       '<span class="m-del" data-act="mRemove:' + i + '">DELETE</span>' +
@@ -1913,10 +1919,12 @@ var actions = {
 
   sendMessage: function () {
     var c = state.data.cform;
-    if (!c.name || !c.message) return;
-    var item = { id: 'm' + Date.now(), at: Date.now(), name: c.name, email: c.email, topic: c.topic, message: c.message, read: false };
+    /* a number is the one thing she needs to answer them, so it is not optional */
+    if (!c.name || !c.phone || !c.message) { flash('message-error'); return; }
+    var item = { id: 'm' + Date.now(), at: Date.now(), name: c.name, phone: c.phone,
+      email: c.email, topic: c.topic, message: c.message, read: false };
     submit('/api/messages', item, function () { state.data.messages.unshift(item); }, 'message-sent');
-    state.data.cform = { name: '', email: '', topic: '', message: '' };
+    state.data.cform = { name: '', phone: '', email: '', topic: '', message: '' };
     saveForms();
   },
 
