@@ -60,7 +60,7 @@ var state = {
 
 var KEY = 'rose-studio-v1';
 var FORMS_KEY = 'rose-forms-v1';
-var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'gallery', 'hours', 'times', 'brand'];
+var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'gallery', 'hours', 'times', 'brand', 'contact'];
 var FORM_KEYS = ['form', 'rform', 'cform'];
 
 function blank() { return JSON.parse(JSON.stringify(DEFAULT_CONTENT)); }
@@ -69,7 +69,7 @@ function blank() { return JSON.parse(JSON.stringify(DEFAULT_CONTENT)); }
 function applySaved(saved) {
   if (!saved) return;
   state.data = Object.assign(state.data, saved);
-  ['home', 'artist', 'brand'].forEach(function (k) {
+  ['home', 'artist', 'brand', 'contact'].forEach(function (k) {
     if (saved[k]) state.data[k] = Object.assign(blank()[k], saved[k]);
   });
   normaliseGallery();
@@ -1128,10 +1128,12 @@ function contactPage() {
     return '<div class="hours-row"><span>' + esc(h.day) + '</span><span>' + esc(h.open || 'Closed') + '</span></div>';
   }).join('');
 
+  /* the words at the top are hers to change in the panel; a blank line is left out */
+  var c = d.contact || {};
   return '<div class="page">' +
     '<div class="page-head">' +
-      '<h1>Say hello</h1>' +
-      '<p class="lede">Appointments are booked on this site — for anything else, write to me.</p>' +
+      '<h1>' + esc(c.title || 'Say hello') + '</h1>' +
+      (c.lede ? '<p class="lede">' + esc(c.lede) + '</p>' : '') +
     '</div>' +
     '<section class="contact-grid">' +
       '<div class="contact-form">' +
@@ -1508,6 +1510,11 @@ function panelPages() {
         '<div class="field"><span class="field-label">Book-with-us cut-out</span>' +
           '<div class="a-img-xs frame">' + photo(d.home.ctaImg, 'NO PHOTO') + '</div>' +
           '<label class="upload">UPLOAD<input type="file" accept="image/*" data-upload="home.ctaImg"></label></div>' +
+        '<p class="eyebrow" style="margin-top:12px">CONTACT PAGE</p>' +
+        '<div class="field"><span class="field-label">Heading at the top of the page</span>' +
+          '<input type="text" value="' + esc(d.contact.title) + '" data-k="contact.title" placeholder="Say hello"></div>' +
+        '<div class="field"><span class="field-label">Line under the heading (leave blank for none)</span>' +
+          '<textarea rows="2" data-k="contact.lede" placeholder="Appointments are booked on this site — for anything else, write to me.">' + esc(d.contact.lede) + '</textarea></div>' +
       '</div>' +
       '<div class="pages-col">' +
         '<p class="eyebrow">THE ARTIST</p>' +
