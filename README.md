@@ -229,6 +229,14 @@ Past days render dimmed with no click handler. The week starts on Monday to
 match `DAYS` in `content.js`. A booking carries both a readable `date`
 ("5 October 2026") and a sortable `dateISO`.
 
+The times a client can pick are `times` in the site content, a plain list of
+strings that Availability in the panel adds to, edits and deletes from, under
+**Booking times**. They show on the booking page in that order; a blank row
+is skipped, and with none set the page says so instead of offering slots.
+`content.js` holds the four a fresh site starts with, and content saved
+before the list existed picks them up on load. Bookings record the time as
+text, so changing the list leaves past bookings intact.
+
 ## Not built yet
 
 - blocking dates and times that are already taken

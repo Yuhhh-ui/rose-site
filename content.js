@@ -8,8 +8,6 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'];
 
-const TIME_SLOTS = ['9:00 am', '11:30 am', '2:00 pm', '4:30 pm'];
-
 const DEFAULT_CONTENT = {
   home: {
     script: 'Enhancing your',          // small script line above the headline
@@ -69,6 +67,9 @@ const DEFAULT_CONTENT = {
   gallery: [],
 
   hours: DAYS.map(function (day) { return { day: day, open: '' }; }),
+
+  // the times a client can pick on the booking page; the panel adds and removes them
+  times: ['9:00 am', '11:30 am', '2:00 pm', '4:30 pm'],
 
   brand: { ig: '@makeupbyrose.stkitts', email: '', address: '', whatsapp: '' },
 
