@@ -73,6 +73,9 @@ const DEFAULT_CONTENT = {
 
   brand: { ig: '@makeupbyrose.stkitts', email: '', address: '', whatsapp: '' },
 
+  // the heading at the top of the contact page and the line under it
+  contact: { title: 'Say hello', lede: 'Appointments are booked on this site — for anything else, write to me.' },
+
   // filled in as the site is used
   bookings: [],
   reviews: [],
