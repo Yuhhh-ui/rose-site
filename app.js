@@ -60,7 +60,7 @@ var state = {
 
 var KEY = 'rose-studio-v1';
 var FORMS_KEY = 'rose-forms-v1';
-var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'gallery', 'hours', 'brand'];
+var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'gallery', 'hours', 'times', 'brand'];
 var FORM_KEYS = ['form', 'rform', 'cform'];
 
 function blank() { return JSON.parse(JSON.stringify(DEFAULT_CONTENT)); }
@@ -74,6 +74,7 @@ function applySaved(saved) {
   });
   normaliseGallery();
   normalisePolicies();
+  normaliseTimes();
 }
 
 function loadLocal() {
@@ -132,6 +133,20 @@ function normalisePolicies() {
    the website. A heading on its own is one she has not got to yet. */
 function livePolicies() {
   return (state.data.policies || []).filter(function (p) { return p.text || p.img; });
+}
+
+/* The booking times used to be fixed in content.js and are now a list the
+   panel edits. Content saved before that has no list, so it starts from the
+   times the site ships with; anything else is kept exactly as typed. */
+function normaliseTimes() {
+  var t = state.data.times;
+  if (!Array.isArray(t)) { state.data.times = blank().times; return; }
+  state.data.times = t.map(function (x) { return x == null ? '' : String(x); });
+}
+
+/* The ones a client can pick: blank rows in the panel are left out. */
+function liveTimes() {
+  return (state.data.times || []).map(function (t) { return t.trim(); }).filter(Boolean);
 }
 
 function pick(keys) {
@@ -961,12 +976,14 @@ function bookingPage() {
     '</div>';
   }).join('');
 
-  var slots = TIME_SLOTS.map(function (t) {
+  var times = liveTimes();
+  var slots = times.map(function (t) {
     return '<div class="slot" data-act="slot:' + esc(t) + '">' +
       '<span>' + esc(t) + '</span>' +
       (d.form.time === t ? '<span class="tick">✓</span>' : '') +
     '</div>';
   }).join('');
+  if (!times.length) slots = '<p class="place-note">No times are open yet \u2014 please get in touch.</p>';
 
   return '<div class="page">' +
     '<div class="page-head">' +
@@ -1355,10 +1372,29 @@ function panelAvailability() {
       'placeholder="e.g. 9:00 — 18:00, or leave blank"></div>';
   }).join('');
 
+  /* The times a client can pick on the booking page, in the order they are
+     listed here. A blank row is kept while she types but never shown. */
+  var times = state.data.times || [];
+  var slots = times.map(function (t, i) {
+    return '<div class="field-row" style="grid-template-columns:1fr auto">' +
+      '<input type="text" value="' + esc(t) + '" data-k="times.' + i + '" placeholder="e.g. 9:00 am">' +
+      '<span class="remove-link" data-act="delTime:' + i + '">REMOVE</span>' +
+    '</div>';
+  }).join('');
+
   return '<div class="main-body narrow">' +
     '<p class="empty-text" style="margin-bottom:22px;color:var(--mute-2)">' +
       'Type the hours you are open. Anything you leave blank shows as closed on the contact page.</p>' +
     '<div class="stack">' + rows + '</div>' +
+
+    '<p class="eyebrow" style="margin:36px 0 8px">BOOKING TIMES</p>' +
+    '<p class="empty-text" style="margin-bottom:18px;color:var(--mute-2)">' +
+      'The times a client can choose on the booking page, shown in this order. ' +
+      (liveTimes().length
+        ? ''
+        : '<strong>None are set, so nobody can pick a time</strong> \u2014 add at least one.') + '</p>' +
+    (times.length ? '<div class="stack">' + slots + '</div>' : '') +
+    '<span class="btn-wide" style="margin-top:' + (times.length ? '12' : '0') + 'px" data-act="addTime">+ ADD A TIME</span>' +
   '</div>';
 }
 
@@ -1943,6 +1979,20 @@ var actions = {
   },
   addPolicy: function () {
     state.data.policies.push({ title: '', text: '', img: '' });
+    save(); render();
+  },
+
+  /* panel — booking times */
+  addTime: function () {
+    state.data.times.push('');
+    save(); render();
+    var rows = document.querySelectorAll('[data-k^="times."]');
+    if (rows.length) rows[rows.length - 1].focus();
+  },
+  delTime: function (i) {
+    var t = state.data.times[Number(i)];
+    if (t.trim() && !window.confirm('Remove "' + t + '" from the booking page? Bookings already taken for it are not affected.')) return;
+    state.data.times.splice(Number(i), 1);
     save(); render();
   },
   delPolicy: function (i) {
