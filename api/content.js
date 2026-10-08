@@ -8,7 +8,7 @@ import { loggedIn } from '../lib/auth.js';
 import { getContent, putContent, listItems } from '../lib/store.js';
 
 /* the only keys the panel edits; anything else is dropped */
-const KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'gallery', 'hours', 'times', 'brand', 'contact'];
+const KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'gallery', 'hours', 'times', 'brand', 'contact', 'polTail'];
 const MAX_BYTES = 2 * 1024 * 1024;
 
 export default async function handler(req, res) {

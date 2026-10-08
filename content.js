@@ -76,6 +76,9 @@ const DEFAULT_CONTENT = {
   // the heading at the top of the contact page and the line under it
   contact: { title: 'Say hello', lede: 'Appointments are booked on this site — for anything else, write to me.' },
 
+  // the band at the foot of the policies page: a small label and the line under it
+  polTail: { label: 'STILL UNSURE?', title: 'Message me and I will talk it through.' },
+
   // filled in as the site is used
   bookings: [],
   reviews: [],
