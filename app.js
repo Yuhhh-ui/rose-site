@@ -60,7 +60,7 @@ var state = {
 
 var KEY = 'rose-studio-v1';
 var FORMS_KEY = 'rose-forms-v1';
-var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'gallery', 'hours', 'times', 'brand', 'contact'];
+var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'gallery', 'hours', 'times', 'brand', 'contact', 'polTail'];
 var FORM_KEYS = ['form', 'rform', 'cform'];
 
 function blank() { return JSON.parse(JSON.stringify(DEFAULT_CONTENT)); }
@@ -69,7 +69,7 @@ function blank() { return JSON.parse(JSON.stringify(DEFAULT_CONTENT)); }
 function applySaved(saved) {
   if (!saved) return;
   state.data = Object.assign(state.data, saved);
-  ['home', 'artist', 'brand', 'contact'].forEach(function (k) {
+  ['home', 'artist', 'brand', 'contact', 'polTail'].forEach(function (k) {
     if (saved[k]) state.data[k] = Object.assign(blank()[k], saved[k]);
   });
   normaliseGallery();
@@ -1064,7 +1064,7 @@ function bookingPage() {
    piece: a heading, then the policy itself — typed out, or photographed if
    she already has it written somewhere. */
 function policiesPage() {
-  var pol = livePolicies();
+  var pol = livePolicies(), tail = state.data.polTail || {};
 
   var index = pol.map(function (p, i) {
     return '<span class="pol-index-item' + (i === 0 ? ' on' : '') + '" data-act="polJump:' + i + '">' +
@@ -1110,11 +1110,12 @@ function policiesPage() {
           '</p>' +
         '</section>') +
 
-    /* the way on is at the top; down here is the way to ask instead */
+    /* the way on is at the top; down here is the way to ask instead. The
+       words are hers to change in the panel; a blank one is left out. */
     '<section class="pol-tail">' +
       '<div class="pol-tail-copy">' +
-        '<span class="pol-tail-label">STILL UNSURE?</span>' +
-        '<h3 class="pol-tail-title">Message me and I will talk it through.</h3>' +
+        (tail.label ? '<span class="pol-tail-label">' + esc(tail.label) + '</span>' : '') +
+        (tail.title ? '<h3 class="pol-tail-title">' + esc(tail.title) + '</h3>' : '') +
       '</div>' +
       '<span class="btn-line pol-tail-btn" data-act="go:contact">ASK A QUESTION</span>' +
     '</section>' +
@@ -1515,6 +1516,11 @@ function panelPages() {
           '<input type="text" value="' + esc(d.contact.title) + '" data-k="contact.title" placeholder="Say hello"></div>' +
         '<div class="field"><span class="field-label">Line under the heading (leave blank for none)</span>' +
           '<textarea rows="2" data-k="contact.lede" placeholder="Appointments are booked on this site — for anything else, write to me.">' + esc(d.contact.lede) + '</textarea></div>' +
+        '<p class="eyebrow" style="margin-top:12px">FOOT OF THE POLICIES PAGE</p>' +
+        '<div class="field"><span class="field-label">Small label (leave blank for none)</span>' +
+          '<input type="text" value="' + esc(d.polTail.label) + '" data-k="polTail.label" placeholder="STILL UNSURE?"></div>' +
+        '<div class="field"><span class="field-label">The line under it (leave blank for none)</span>' +
+          '<textarea rows="2" data-k="polTail.title" placeholder="Message me and I will talk it through.">' + esc(d.polTail.title) + '</textarea></div>' +
       '</div>' +
       '<div class="pages-col">' +
         '<p class="eyebrow">THE ARTIST</p>' +
