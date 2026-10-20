@@ -4,7 +4,8 @@
                   be several, joined with " · "; a time already taken on that
                   date is refused
                   `minutes` is how long the services take altogether, so the
-                  booking holds every time it runs over
+                  booking holds every time it runs over, plus the breathing
+                  room set in the panel (`gap` in the content, 30 by default)
    GET    public  ?taken=1 -> { taken: [{ date, time, minutes }] }   dates as
                   YYYY-MM-DD, every booking that is not cancelled, nothing about who
    GET    studio  -> { items }
@@ -17,9 +18,9 @@
 
 import { send, fail, body, clean, id } from '../lib/http.js';
 import { loggedIn } from '../lib/auth.js';
-import { listItems, getItem, putItem, delItem, keepInHistory } from '../lib/store.js';
+import { listItems, getItem, putItem, delItem, keepInHistory, getContent } from '../lib/store.js';
 import { notify, bookingText } from '../lib/notify.js';
-import { timeToMinutes, overlaps } from '../lib/time.js';
+import { timeToMinutes, overlaps, gapMinutes } from '../lib/time.js';
 
 const STATUSES = ['pending', 'confirmed', 'completed', 'cancelled'];
 
@@ -32,12 +33,12 @@ function takenTimes(all) {
 
 /* Would a booking at this date and time, for this long, run into one already
    standing? Times that cannot be read clash only when written the same way. */
-function clashes(taken, item) {
+function clashes(taken, item, gap) {
   var start = timeToMinutes(item.time);
   return taken.some(function (t) {
     if (t.date !== item.dateISO) return false;
     if (t.time === item.time) return true;
-    return overlaps(start, item.minutes, timeToMinutes(t.time), t.minutes);
+    return overlaps(start, item.minutes, timeToMinutes(t.time), t.minutes, gap);
   });
 }
 
@@ -65,7 +66,7 @@ export default async function handler(req, res) {
         return fail(res, 400, 'Add a service, a date, a time, your name and a number to reach you on.');
       }
       /* two people on the page at once: the second to send loses the time */
-      if (item.dateISO && clashes(takenTimes(await listItems('bookings')), item)) {
+      if (item.dateISO && clashes(takenTimes(await listItems('bookings')), item, gapMinutes(await getContent()))) {
         return fail(res, 409, 'That time has just been taken on that date. Please pick another.');
       }
       await putItem('bookings', item);

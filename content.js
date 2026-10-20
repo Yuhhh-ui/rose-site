@@ -71,6 +71,9 @@ const DEFAULT_CONTENT = {
   // the times a client can pick on the booking page; the panel adds and removes them
   times: ['9:00 am', '11:30 am', '2:00 pm', '4:30 pm'],
 
+  // minutes kept clear after every appointment, in case it runs over
+  gap: 30,
+
   brand: { ig: '@makeupbyrose.stkitts', email: '', address: '', whatsapp: '' },
 
   // the heading at the top of the contact page and the line under it
