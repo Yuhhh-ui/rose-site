@@ -48,7 +48,8 @@ var state = {
   lastBooking: null,   // the booking just sent, for the WhatsApp link on the confirmation
   readPolicies: false, // the policies have been shown on the way to the form this visit
   polAt: null,         // a policy picked from the index, while it is still on screen
-  polAtAt: 0           // when it was picked, to ride out the scroll to it
+  polAtAt: 0,          // when it was picked, to ride out the scroll to it
+  histOpen: false      // the "add a past booking" form is showing
 };
 
 /* --- storage ------------------------------------------------------------ */
@@ -62,7 +63,7 @@ var state = {
 var KEY = 'rose-studio-v1';
 var FORMS_KEY = 'rose-forms-v1';
 var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'gallery', 'hours', 'times', 'brand', 'contact', 'polTail'];
-var FORM_KEYS = ['form', 'rform', 'cform'];
+var FORM_KEYS = ['form', 'rform', 'cform', 'hform'];
 
 function blank() { return JSON.parse(JSON.stringify(DEFAULT_CONTENT)); }
 
@@ -1672,6 +1673,37 @@ function whenRequested(at) {
   return d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3) + ' ' + d.getFullYear();
 }
 
+/* The form for a booking from before the site kept a history, typed in from
+   an alert or a diary. It is dated by the appointment so it sits in the right
+   place in the list, and marked as added by hand so it can be taken out again. */
+function pastBookingForm() {
+  var f = state.data.hform;
+  var opt = function (v, label, cur) { return '<option value="' + esc(v) + '"' + (cur === v ? ' selected' : '') + '>' + esc(label) + '</option>'; };
+  var svcs = state.data.services.map(function (s) { return s.name; });
+  if (f.service && svcs.indexOf(f.service) < 0) svcs.push(f.service);
+  return '<div class="hist-form">' +
+    '<div class="detail-grid">' +
+      '<input type="text" value="' + esc(f.name) + '" data-k="hform.name" placeholder="Client\'s name *">' +
+      '<input type="tel" value="' + esc(f.contact) + '" data-k="hform.contact" placeholder="Phone / WhatsApp">' +
+      '<input type="text" value="' + esc(f.email) + '" data-k="hform.email" placeholder="Email">' +
+      '<select data-k="hform.service">' + opt('', 'Service', f.service) +
+        svcs.map(function (n) { return opt(n, n, f.service); }).join('') + '</select>' +
+      '<input type="date" value="' + esc(f.date) + '" data-k="hform.date" title="Date of the appointment *">' +
+      '<input type="text" value="' + esc(f.time) + '" data-k="hform.time" placeholder="Time, e.g. 2:00 pm">' +
+      '<select data-k="hform.place">' + opt('Studio', 'At the studio', f.place) + opt('Travel to client', 'Travelled to the client', f.place) + '</select>' +
+      '<select data-k="hform.status">' + opt('completed', 'Completed', f.status) + opt('cancelled', 'Cancelled', f.status) +
+        opt('confirmed', 'Confirmed', f.status) + opt('pending', 'Pending', f.status) + '</select>' +
+    '</div>' +
+    '<textarea rows="2" data-k="hform.notes" style="margin-top:16px" placeholder="Anything worth remembering">' + esc(f.notes) + '</textarea>' +
+    '<div class="row" style="margin-top:16px;align-items:center">' +
+      '<span class="btn-sm" data-act="histAdd">ADD TO HISTORY</span>' +
+      '<span class="remove-link" data-act="histToggle">CANCEL</span>' +
+    '</div>' +
+    (state.flash === 'hist-error' ? '<p class="err" style="margin-top:12px">A name and the date of the appointment are needed.</p>' : '') +
+    (state.flash === 'hist-added' ? '<p class="ok" style="margin-top:12px">Added.</p>' : '') +
+  '</div>';
+}
+
 function panelHistory() {
   var all = allBookings();
   var clients = {};
@@ -1685,19 +1717,25 @@ function panelHistory() {
     return '<div class="b-row">' +
       '<div class="b-col"><span class="b-name">' + esc(b.name) + '</span>' +
         '<span class="b-sub">' + esc(b.contact || '\u2014') + (b.email ? ' \u00b7 ' + esc(b.email) : '') + '</span></div>' +
-      '<div class="b-col"><span class="b-mid">' + esc(b.service) + '</span>' +
+      '<div class="b-col"><span class="b-mid">' + esc(b.service || '\u2014') + '</span>' +
         '<span class="b-sub">' + esc(b.place) + (extra.length ? ' \u00b7 ' + esc(extra.join(' \u00b7 ')) : '') + '</span></div>' +
-      '<div class="b-col"><span class="b-mid">' + esc(b.date + ' \u00b7 ' + b.time) + '</span>' +
+      '<div class="b-col"><span class="b-mid">' + esc(b.date + (b.time ? ' \u00b7 ' + b.time : '')) + '</span>' +
         '<span class="b-status">' + esc(String(b.status || 'pending').toUpperCase()) + '</span>' +
-        '<span class="b-sub">Requested ' + esc(whenRequested(b.at)) + '</span></div>' +
-      '<div class="b-actions">' + clientWaButton(b) + '</div>' +
+        '<span class="b-sub">' + (b.manual ? 'Added by hand' : 'Requested ' + esc(whenRequested(b.at))) + '</span></div>' +
+      '<div class="b-actions">' + clientWaButton(b) +
+        (b.manual ? '<span class="tag tag-plain" data-act="histRemove:' + esc(b.id) + '">REMOVE</span>' : '') +
+      '</div>' +
     '</div>';
   }).join('');
 
   return '<div class="main-body">' +
     '<p class="empty-text" style="margin:0 0 22px;color:var(--mute-2)">' +
       'Every booking request ever made, newest first. Nothing here is removed when a booking is ' +
-      'cleared or cancelled, so you can always look a client up.</p>' +
+      'cleared or cancelled, so you can always look a client up. A client from before the site kept ' +
+      'this list can be typed in by hand.</p>' +
+    (state.histOpen
+      ? pastBookingForm()
+      : '<span class="btn-sm" style="margin-bottom:26px" data-act="histToggle">+ ADD A PAST BOOKING</span>') +
     '<div class="stats">' +
       '<div class="stat"><p>REQUESTS</p><span class="gold">' + all.length + '</span></div>' +
       '<div class="stat"><p>CLIENTS</p><span>' + Object.keys(clients).length + '</span></div>' +
@@ -2106,6 +2144,35 @@ var actions = {
   toggle:   function (path) { setPath(path, !getPath(path)); render(); },
   clearImg: function (path) { setPath(path, ''); render(); },
   galRemove: function (i) { state.data.gallery.splice(Number(i), 1); save(); render(); },
+
+  /* panel — history: a booking from before the list existed, typed in */
+  histToggle: function () { state.histOpen = !state.histOpen; state.flash = ''; render(); },
+  histAdd: function () {
+    var f = state.data.hform;
+    if (!f.name || !isIso(f.date)) { flash('hist-error'); return; }
+    var item = {
+      id: 'h' + Date.now(), manual: true, status: f.status || 'completed',
+      name: f.name, contact: f.contact, email: f.email, occasion: '', notes: f.notes,
+      service: f.service, date: prettyDate(f.date), dateISO: f.date, time: f.time,
+      place: f.place || 'Studio', at: isoToDate(f.date).getTime() + 12 * 3600 * 1000
+    };
+    var done = function () {
+      state.data.hform = blank().hform;
+      saveForms();
+      flash('hist-added');
+    };
+    if (!API.remote) { (state.data.history = state.data.history || []).unshift(item); save(); done(); return; }
+    API.post('/api/history', item)
+      .then(function (r) { state.data.history.unshift(r.item || item); done(); })
+      .catch(function (e) { flash('inbox-error:' + e.message); });
+  },
+  histRemove: function (id) {
+    var h = (state.data.history || []).filter(function (x) { return x.id === id; })[0];
+    if (!h || !window.confirm('Take "' + (h.name || 'this one') + '" out of the history?')) return;
+    inbox('history', 'DELETE', { id: id }, function () {
+      state.data.history = state.data.history.filter(function (x) { return x.id !== id; });
+    });
+  },
 
   /* panel — bookings */
   bConfirm:  function (i) { setStatus(i, 'confirmed'); },
