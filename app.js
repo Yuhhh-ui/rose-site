@@ -100,22 +100,76 @@ function restoreForms() {
 }
 
 /* --- times already taken ------------------------------------------------
-   A booking holds its time on its date from the moment it is sent, and a
-   cancelled one lets it go. The site asks the server which are taken when
-   the booking page opens; a local copy works it out from its own bookings. */
-function takenKey(date, time) { return date + '|' + time; }
+   A booking holds its time on its date from the moment it is sent, for as
+   long as its services take, and a cancelled one lets it go. The site asks
+   the server which are taken when the booking page opens; a local copy works
+   it out from its own bookings.
 
-function isTaken(date, time) { return !!state.taken[takenKey(date, time)]; }
+   The two readers below are the same as in lib/time.js on the server; keep
+   them alike. '9:00 am' -> 540 minutes into the day, or null when it cannot
+   be read; '1 hr 30 min' -> 90 minutes, or 0 when it cannot be read.        */
+function timeToMinutes(str) {
+  var m = /^\s*(\d{1,2})(?::(\d{2}))?\s*([ap])?\.?\s*m?\.?\s*$/i.exec(String(str || ''));
+  if (!m) return null;
+  var h = Number(m[1]), min = Number(m[2] || 0), ap = (m[3] || '').toLowerCase();
+  if (h > 23 || min > 59) return null;
+  if (ap === 'p' && h < 12) h += 12;
+  if (ap === 'a' && h === 12) h = 0;
+  return h * 60 + min;
+}
+
+function durationMinutes(str) {
+  var s = String(str || '').toLowerCase();
+  var hours = /(\d+(?:[.,]\d+)?)\s*(?:h(?![a-z])|hr|hour)/.exec(s);
+  var mins  = /(\d+)\s*(?:m\b|min)/.exec(s);
+  if (!hours && !mins) {
+    var bare = /^\s*(\d+)\s*$/.exec(s);
+    return bare ? Number(bare[1]) : 0;
+  }
+  var total = 0;
+  if (hours) total += Math.round(Number(hours[1].replace(',', '.')) * 60);
+  if (mins)  total += Number(mins[1]);
+  return total;
+}
+
+/* how long the services picked on the form take altogether */
+function formMinutes() {
+  return state.data.form.svcs.reduce(function (sum, name) {
+    var s = state.data.services.filter(function (x) { return x.name === name; })[0];
+    return sum + (s ? durationMinutes(s.dur) : 0);
+  }, 0);
+}
+
+/* Would an appointment at `time` on `date`, for `minutes`, run into one
+   already standing? A booking whose length is unknown holds its own time
+   only, and a time that cannot be read clashes only when written the same way. */
+function isTaken(date, time, minutes) {
+  var start = timeToMinutes(time), end = start == null ? null : start + Math.max(minutes || 0, 1);
+  return (state.taken[date] || []).some(function (t) {
+    if (t.time === time) return true;
+    var s = timeToMinutes(t.time);
+    if (start == null || s == null) return false;
+    return start < s + Math.max(t.minutes || 0, 1) && s < end;
+  });
+}
 
 function setTaken(list) {
   state.taken = {};
-  (list || []).forEach(function (t) { if (t.date && t.time) state.taken[takenKey(t.date, t.time)] = true; });
+  (list || []).forEach(function (t) {
+    if (t.date && t.time) (state.taken[t.date] = state.taken[t.date] || []).push({ time: t.time, minutes: t.minutes || 0 });
+  });
+}
+
+/* a chosen time that no longer fits, after the date or the services changed, is let go of */
+function dropTakenTime() {
+  var f = state.data.form;
+  if (f.time && isIso(f.date) && isTaken(f.date, f.time, formMinutes())) setPath('form.time', '');
 }
 
 function loadTaken() {
   if (!API.remote) {
     setTaken((state.data.bookings || []).filter(function (b) { return b.status !== 'cancelled'; })
-      .map(function (b) { return { date: b.dateISO, time: b.time }; }));
+      .map(function (b) { return { date: b.dateISO, time: b.time, minutes: b.minutes || 0 }; }));
     return Promise.resolve();
   }
   return API.get('/api/bookings?taken=1')
@@ -1009,10 +1063,11 @@ function bookingPage() {
     '</div>';
   }).join('');
 
-  /* a time someone else has on the chosen date is shown but cannot be picked */
-  var times = liveTimes();
+  /* a time someone else has on the chosen date is shown but cannot be picked,
+     and nor can one the services picked would run over into */
+  var times = liveTimes(), need = formMinutes();
   var slots = times.map(function (t) {
-    var gone = isIso(d.form.date) && isTaken(d.form.date, t);
+    var gone = isIso(d.form.date) && isTaken(d.form.date, t, need);
     if (gone) return '<div class="slot off"><span>' + esc(t) + '</span><span class="slot-note">TAKEN</span></div>';
     return '<div class="slot" data-act="slot:' + esc(t) + '">' +
       '<span>' + esc(t) + '</span>' +
@@ -2072,6 +2127,7 @@ var actions = {
     state.booked = null;
     var name = state.data.services[i].name, svcs = state.data.form.svcs;
     if (svcs.indexOf(name) < 0) setPath('form.svcs', svcs.concat([name]));
+    dropTakenTime();
     go('booking');
   },
 
@@ -2085,12 +2141,13 @@ var actions = {
   pick:  function (i) {
     var name = state.data.services[i].name, svcs = state.data.form.svcs;
     setPath('form.svcs', svcs.indexOf(name) < 0 ? svcs.concat([name]) : svcs.filter(function (n) { return n !== name; }));
+    dropTakenTime();
     render();
   },
   /* a time already taken on the newly chosen date is let go of */
   day:   function (iso) {
     setPath('form.date', iso);
-    if (state.data.form.time && isTaken(iso, state.data.form.time)) setPath('form.time', '');
+    dropTakenTime();
     render();
   },
   month: function (step) {
@@ -2104,12 +2161,12 @@ var actions = {
     var f = state.data.form;
     if (!f.name || !f.contact || !f.svcs.length || !isIso(f.date) || !f.time) { flash('booking-error'); return; }
     if (isoToDate(f.date) < todayStart()) { flash('booking-past'); return; }
-    if (isTaken(f.date, f.time)) { flash('booking-taken'); return; }
+    if (isTaken(f.date, f.time, formMinutes())) { flash('booking-taken'); return; }
     var item = {
       id: 'b' + Date.now(), at: Date.now(),
       name: f.name, contact: f.contact, email: f.email,
       occasion: f.occasion, notes: f.notes, service: f.svcs.join(' · '),
-      date: prettyDate(f.date), dateISO: f.date, time: f.time,
+      date: prettyDate(f.date), dateISO: f.date, time: f.time, minutes: formMinutes(),
       place: f.place || 'Studio', status: 'pending'
     };
     if (state.sending) return;

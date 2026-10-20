@@ -247,12 +247,21 @@ and the booking records them joined with " · " in `service`, so everything
 that shows a booking's service shows them all without knowing the
 difference.
 
-A time is held on its date from the moment a request is sent, and a
-cancelled booking lets it go. The booking page asks `/api/bookings?taken=1`
-when it opens, shows a taken time dimmed with TAKEN on the chosen date, and
-drops a chosen time that turns out to be taken when the date changes. The
-server refuses a clash at the moment of booking, so two people on the page
-at once cannot both get the same time.
+A time is held on its date from the moment a request is sent, for as long
+as the services picked take, and a cancelled booking lets it go. The
+lengths come from each service's Length in the panel (`dur`: "90 min",
+"1 hr 30 min", "1.5 hours" and "2h" all read; a length that cannot be read
+counts as holding the start time only), added up and sent with the booking
+as `minutes`. A booking at 9:00 for 90 minutes holds 9:00, 9:30 and 10:00
+of half-hour times and leaves 10:30 free; and a client whose services take
+90 minutes cannot take 9:00 when someone has 10:00, since they would run
+into it. So the times offered depend on the services ticked. The booking
+page asks `/api/bookings?taken=1` when it opens, shows a time that does not
+fit dimmed with TAKEN on the chosen date, and drops a chosen time that no
+longer fits when the date or the services change. The server refuses an
+overlap at the moment of booking, so two people on the page at once cannot
+both get the same time. `lib/time.js` reads times and lengths on the
+server; `app.js` carries the same two readers for the page.
 
 The times a client can pick are `times` in the site content, a plain list of
 strings that Availability in the panel adds to, edits and deletes from, under
