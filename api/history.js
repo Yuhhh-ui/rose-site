@@ -1,14 +1,16 @@
 /* Every booking request ever made, kept even after the booking itself is
    cleared from the Bookings section. Written by api/bookings.js; nothing
    deletes from it short of Settings → Clear everything.
-   GET    studio  -> { items }   newest first
+   GET    studio  -> { items, clearedAt }   newest first
    POST   studio  { name, contact, email, service, dateISO (YYYY-MM-DD), time, place, status, notes }
                   a past booking typed in by hand; name and date required
-   DELETE studio  { id }         only one that was added by hand                 */
+   DELETE studio  { id }         only one that was added by hand
+                  { clear: true } the whole history; bookings still in Bookings
+                                  are left alone and are not copied back       */
 
 import { send, fail, body, clean, id } from '../lib/http.js';
 import { loggedIn } from '../lib/auth.js';
-import { listItems, getItem, putItem, delItem, keepInHistory } from '../lib/store.js';
+import { listItems, getItem, putItem, delItem, keepInHistory, clearHistory, historyClearedAt } from '../lib/store.js';
 
 const STATUSES = ['pending', 'confirmed', 'completed', 'cancelled'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -29,7 +31,7 @@ export default async function handler(req, res) {
       /* bookings from before the history existed are copied in the first time it is read */
       var live = await listItems('bookings');
       for (var i = 0; i < live.length; i++) await keepInHistory(live[i]);
-      return send(res, 200, { items: await listItems('history') });
+      return send(res, 200, { items: await listItems('history'), clearedAt: await historyClearedAt() });
     }
 
     if (req.method === 'POST') {
@@ -58,6 +60,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
+      if (b.clear) { await clearHistory(); return send(res, 200, { ok: true }); }
       var cur = await getItem('history', String(b.id || ''));
       if (!cur) return fail(res, 404, 'Not found');
       if (!cur.manual) return fail(res, 400, 'Only a booking added by hand can be removed from the history.');

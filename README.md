@@ -98,7 +98,9 @@ Typing saves; leaving the field re-renders. File inputs carry
   lost. Nothing deletes from it except Settings → Clear everything. A client
   from before the history existed can be typed in with **Add a past booking**;
   such an entry is marked `manual`, dated by the appointment so it sorts into
-  place, and is the only kind that can be removed again. **Clients** is built from the same list, so a client stays
+  place, and is the only kind that can be removed on its own. **Clear
+  history** wipes the lot and records when, and a booking from before that
+  moment is never copied back in, so a clear lasts. **Clients** is built from the same list, so a client stays
   listed after their bookings are cleared.
 - **Services and lash styles** are a plain list the panel adds to and deletes
   from, so nothing assumes there are four of them. Bookings record the service
@@ -190,7 +192,7 @@ All JSON. "studio" means the session cookie from logging in is required.
 | `/api/bookings` | `POST` new request (name, contact, service, date and time required) · `GET` studio · `PATCH {id,status}` studio · `DELETE {id}` or `{clear:true}` studio |
 | `/api/reviews` | `GET` published (all, for studio) · `POST {name,text,img}` · `PATCH {id,published}` or `{id,featured:true}` studio · `DELETE {id}` studio |
 | `/api/messages` | `POST` (name, phone and message required) · `GET` studio · `DELETE {id}` studio |
-| `/api/history` | `GET` studio — every booking ever requested, newest first · `POST` studio — one typed in by hand (name and date required) · `DELETE {id}` studio — only one added by hand |
+| `/api/history` | `GET` studio — every booking ever requested, newest first · `POST` studio — one typed in by hand (name and date required) · `DELETE {id}` studio — only one added by hand, or `{clear:true}` for the whole history |
 | `/api/upload` | `POST {data}` studio → `{url}` |
 | `/api/reset` | `POST` studio — wipes everything |
 | `/api/notify-test` | `POST` studio — sends a test alert, reports per-channel results |
