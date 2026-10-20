@@ -3,8 +3,9 @@
                   name, contact, service, date and time required; service may
                   be several, joined with " · "; a time already taken on that
                   date is refused
-                  `minutes` is how long the services take altogether, so the
-                  booking holds every time it runs over
+                  how long the booking takes comes from its services' lengths
+                  in the panel, so it holds every time it runs over; `minutes`
+                  is only a fallback, for when a service has been renamed
    GET    public  ?taken=1 -> { taken: [{ date, time, minutes }] }   dates as
                   YYYY-MM-DD, every booking that is not cancelled, nothing about who
    GET    studio  -> { items }
@@ -17,17 +18,21 @@
 
 import { send, fail, body, clean, id } from '../lib/http.js';
 import { loggedIn } from '../lib/auth.js';
-import { listItems, getItem, putItem, delItem, keepInHistory } from '../lib/store.js';
+import { listItems, getItem, putItem, delItem, keepInHistory, getContent } from '../lib/store.js';
 import { notify, bookingText } from '../lib/notify.js';
-import { timeToMinutes, overlaps } from '../lib/time.js';
+import { timeToMinutes, overlaps, bookingMinutes } from '../lib/time.js';
 
 const STATUSES = ['pending', 'confirmed', 'completed', 'cancelled'];
 
-/* The times no one else can book: every booking still standing, as date and
-   time only. A cancelled one frees its time again. */
-function takenTimes(all) {
+/* The times no one else can book: every booking still standing, as date,
+   time and length only. A cancelled one frees its time again. The length is
+   read from the services as they are set now, so a booking from before
+   lengths were kept, or a length changed since, still holds the right times. */
+async function takenTimes() {
+  var all = await listItems('bookings');
+  var services = ((await getContent()) || {}).services || [];
   return all.filter(function (x) { return x.status !== 'cancelled' && x.dateISO && x.time; })
-    .map(function (x) { return { date: x.dateISO, time: x.time, minutes: x.minutes || 0 }; });
+    .map(function (x) { return { date: x.dateISO, time: x.time, minutes: bookingMinutes(x, services) }; });
 }
 
 /* Would a booking at this date and time, for this long, run into one already
@@ -64,8 +69,11 @@ export default async function handler(req, res) {
       if (!item.name || !item.contact || !item.service || !item.date || !item.time) {
         return fail(res, 400, 'Add a service, a date, a time, your name and a number to reach you on.');
       }
+      /* the length the server knows wins over the one the page sent */
+      var known = bookingMinutes(item, ((await getContent()) || {}).services || []);
+      if (known) item.minutes = known;
       /* two people on the page at once: the second to send loses the time */
-      if (item.dateISO && clashes(takenTimes(await listItems('bookings')), item)) {
+      if (item.dateISO && clashes(await takenTimes(), item)) {
         return fail(res, 409, 'That time has just been taken on that date. Please pick another.');
       }
       await putItem('bookings', item);
@@ -75,7 +83,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'GET' && (req.query || {}).taken) {
-      return send(res, 200, { taken: takenTimes(await listItems('bookings')) });
+      return send(res, 200, { taken: await takenTimes() });
     }
 
     if (!loggedIn(req)) return fail(res, 401, 'Please sign in.');
