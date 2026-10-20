@@ -189,7 +189,7 @@ All JSON. "studio" means the session cookie from logging in is required.
 |---|---|
 | `/api/session` | `GET` am I logged in · `POST {password}` · `DELETE` |
 | `/api/content` | `GET` the site + published reviews · `PUT {content}` studio |
-| `/api/bookings` | `POST` new request (name, contact, service, date and time required) · `GET` studio · `PATCH {id,status}` studio · `DELETE {id}` or `{clear:true}` studio |
+| `/api/bookings` | `POST` new request (name, contact, service, date and time required; a time already taken on that date is refused with 409) · `GET ?taken=1` public, the taken dates and times only · `GET` studio · `PATCH {id,status}` studio · `DELETE {id}` or `{clear:true}` studio |
 | `/api/reviews` | `GET` published (all, for studio) · `POST {name,text,img}` · `PATCH {id,published}` or `{id,featured:true}` studio · `DELETE {id}` studio |
 | `/api/messages` | `POST` (name, phone and message required) · `GET` studio · `DELETE {id}` studio |
 | `/api/history` | `GET` studio — every booking ever requested, newest first · `POST` studio — one typed in by hand (name and date required) · `DELETE {id}` studio — only one added by hand, or `{clear:true}` for the whole history |
@@ -242,6 +242,18 @@ Past days render dimmed with no click handler. The week starts on Monday to
 match `DAYS` in `content.js`. A booking carries both a readable `date`
 ("5 October 2026") and a sortable `dateISO`.
 
+A client can pick more than one service: the form holds them as `form.svcs`
+and the booking records them joined with " · " in `service`, so everything
+that shows a booking's service shows them all without knowing the
+difference.
+
+A time is held on its date from the moment a request is sent, and a
+cancelled booking lets it go. The booking page asks `/api/bookings?taken=1`
+when it opens, shows a taken time dimmed with TAKEN on the chosen date, and
+drops a chosen time that turns out to be taken when the date changes. The
+server refuses a clash at the moment of booking, so two people on the page
+at once cannot both get the same time.
+
 The times a client can pick are `times` in the site content, a plain list of
 strings that Availability in the panel adds to, edits and deletes from, under
 **Booking times**. They show on the booking page in that order; a blank row
@@ -252,7 +264,6 @@ text, so changing the list leaves past bookings intact.
 
 ## Not built yet
 
-- blocking dates and times that are already taken
 - payments / deposits
 - automatic email to the client (needs a domain of your own, since a shared
   sender only delivers to the account owner)

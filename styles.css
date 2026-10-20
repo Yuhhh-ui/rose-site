@@ -735,6 +735,11 @@ textarea { resize: vertical; line-height: 1.7; }
   transition: border-color .28s ease;
 }
 .slot:hover { border-color: var(--gold); }
+/* a time someone else already has on the chosen date */
+.slot.off { cursor: default; opacity: .4; }
+.slot.off:hover { border-color: rgba(243, 235, 225, .14); }
+.slot-note { font-size: 8.5px; font-weight: 400; letter-spacing: .2em; color: var(--dim); }
+.step-hint { margin: -14px 0 24px; font-size: 11.5px; font-weight: 300; color: var(--dim); }
 .slot span:first-child { font-size: 14px; font-weight: 200; }
 
 .step-cols .eyebrow { letter-spacing: .30em; }

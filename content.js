@@ -87,7 +87,7 @@ const DEFAULT_CONTENT = {
   histClearedAt: 0,   // when the history was last cleared; older bookings stay out of it
 
   // in-progress form values, kept so a half-filled form survives a refresh
-  form:  { name: '', contact: '', email: '', occasion: '', notes: '', svc: '', date: '', time: '', place: '' },
+  form:  { name: '', contact: '', email: '', occasion: '', notes: '', svcs: [], date: '', time: '', place: '' },
   rform: { name: '', service: '', text: '', img: '' },
   cform: { name: '', phone: '', email: '', topic: '', message: '' },
   // the panel's "add a past booking" form, under History
