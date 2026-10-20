@@ -83,6 +83,7 @@ const DEFAULT_CONTENT = {
   bookings: [],
   reviews: [],
   messages: [],
+  history: [],   // every booking ever requested, kept after it leaves Bookings
 
   // in-progress form values, kept so a half-filled form survives a refresh
   form:  { name: '', contact: '', email: '', occasion: '', notes: '', svc: '', date: '', time: '', place: '' },

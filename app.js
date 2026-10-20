@@ -24,6 +24,7 @@ var SECTIONS = {
   pages:        'Website content',
   reviews:      'Reviews',
   clients:      'Clients',
+  history:      'History',
   messages:     'Messages',
   settings:     'Settings'
 };
@@ -185,7 +186,7 @@ function setSaveNote(text) {
 
 /* bookings, reviews and messages for the panel */
 /* Panel sections that show things clients sent in, so they go stale on their own. */
-var INBOX_SECTIONS = { bookings: 1, reviews: 1, messages: 1, clients: 1 };
+var INBOX_SECTIONS = { bookings: 1, reviews: 1, messages: 1, clients: 1, history: 1 };
 var inboxTimer = null;
 var inboxBusy = false;
 
@@ -193,11 +194,12 @@ var inboxBusy = false;
 function loadInbox(quiet) {
   if (inboxBusy) return Promise.resolve();
   inboxBusy = true;
-  return Promise.all([API.get('/api/bookings'), API.get('/api/reviews'), API.get('/api/messages')])
+  return Promise.all([API.get('/api/bookings'), API.get('/api/reviews'), API.get('/api/messages'), API.get('/api/history')])
     .then(function (r) {
       state.data.bookings = r[0].items;
       state.data.reviews  = r[1].items;
       state.data.messages = r[2].items;
+      state.data.history  = r[3].items;
       state.inboxAt = Date.now();
       render();
     })
@@ -1251,6 +1253,7 @@ function panel() {
     pages:        panelPages,
     reviews:      panelReviews,
     clients:      panelClients,
+    history:      panelHistory,
     messages:     panelMessages,
     settings:     panelSettings
   })[state.section] || panelBookings;
@@ -1637,8 +1640,70 @@ function panelReviews() {
   '</div>';
 }
 
+/* Every booking ever requested: the history, with the live copy's status
+   where one still exists. On a local copy the history is kept in the browser
+   alongside the bookings. */
+function allBookings() {
+  var live = {};
+  (state.data.bookings || []).forEach(function (b) { live[b.id] = b; });
+  var seen = {};
+  var out = (state.data.history || []).map(function (h) {
+    seen[h.id] = 1;
+    return live[h.id] ? Object.assign({}, h, { status: live[h.id].status }) : h;
+  });
+  /* bookings from before the history existed are only in the live list */
+  (state.data.bookings || []).forEach(function (b) { if (!seen[b.id]) out.push(b); });
+  out.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
+  return out;
+}
+
+/* when a request came in, as a short date */
+function whenRequested(at) {
+  if (!at) return '';
+  var d = new Date(at);
+  return d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3) + ' ' + d.getFullYear();
+}
+
+function panelHistory() {
+  var all = allBookings();
+  var clients = {};
+  all.forEach(function (b) { clients[String(b.name || '').toLowerCase()] = 1; });
+  var count = function (st) { return all.filter(function (b) { return b.status === st; }).length; };
+
+  var rows = all.map(function (b) {
+    var extra = [];
+    if (b.occasion) extra.push(b.occasion);
+    if (b.notes) extra.push(b.notes);
+    return '<div class="b-row">' +
+      '<div class="b-col"><span class="b-name">' + esc(b.name) + '</span>' +
+        '<span class="b-sub">' + esc(b.contact || '\u2014') + (b.email ? ' \u00b7 ' + esc(b.email) : '') + '</span></div>' +
+      '<div class="b-col"><span class="b-mid">' + esc(b.service) + '</span>' +
+        '<span class="b-sub">' + esc(b.place) + (extra.length ? ' \u00b7 ' + esc(extra.join(' \u00b7 ')) : '') + '</span></div>' +
+      '<div class="b-col"><span class="b-mid">' + esc(b.date + ' \u00b7 ' + b.time) + '</span>' +
+        '<span class="b-status">' + esc(String(b.status || 'pending').toUpperCase()) + '</span>' +
+        '<span class="b-sub">Requested ' + esc(whenRequested(b.at)) + '</span></div>' +
+      '<div class="b-actions">' + clientWaButton(b) + '</div>' +
+    '</div>';
+  }).join('');
+
+  return '<div class="main-body">' +
+    '<p class="empty-text" style="margin:0 0 22px;color:var(--mute-2)">' +
+      'Every booking request ever made, newest first. Nothing here is removed when a booking is ' +
+      'cleared or cancelled, so you can always look a client up.</p>' +
+    '<div class="stats">' +
+      '<div class="stat"><p>REQUESTS</p><span class="gold">' + all.length + '</span></div>' +
+      '<div class="stat"><p>CLIENTS</p><span>' + Object.keys(clients).length + '</span></div>' +
+      '<div class="stat"><p>COMPLETED</p><span>' + count('completed') + '</span></div>' +
+      '<div class="stat"><p>CANCELLED</p><span>' + count('cancelled') + '</span></div>' +
+    '</div>' +
+    (all.length
+      ? '<div class="stack">' + rows + '</div>'
+      : empty('No history yet', 'Every booking request lands here as it comes in, and stays here for good.')) +
+  '</div>';
+}
+
 function panelClients() {
-  var bs = state.data.bookings;
+  var bs = allBookings();
   var byName = {};
   bs.forEach(function (b) {
     var key = String(b.name).toLowerCase();
@@ -1910,7 +1975,7 @@ var actions = {
     clearInterval(inboxTimer); inboxTimer = null;
     if (API.remote) API.del('/api/session').catch(function () {});
     state.logged = false; state.page = 'home';
-    state.data.bookings = []; state.data.messages = [];
+    state.data.bookings = []; state.data.messages = []; state.data.history = [];
     if (API.remote) API.get('/api/content').then(function (r) { state.data.reviews = r.reviews || []; render(); }).catch(function () {});
     render(); window.scrollTo(0, 0);
   },
@@ -1949,7 +2014,11 @@ var actions = {
       place: f.place || 'Studio', status: 'pending'
     };
     if (state.sending) return;
-    if (!API.remote) { state.data.bookings.unshift(item); save(); finishBooking(item); return; }
+    if (!API.remote) {
+      state.data.bookings.unshift(item);
+      (state.data.history = state.data.history || []).unshift(JSON.parse(JSON.stringify(item)));
+      save(); finishBooking(item); return;
+    }
     state.sending = true; state.flash = ''; render();
     API.post('/api/bookings', item)
       .then(function () { state.sending = false; finishBooking(item); })
@@ -2098,7 +2167,11 @@ var actions = {
 
 function setStatus(i, status) {
   var b = state.data.bookings[Number(i)];
-  inbox('bookings', 'PATCH', { id: b.id, status: status }, function () { b.status = status; });
+  inbox('bookings', 'PATCH', { id: b.id, status: status }, function () {
+    b.status = status;
+    /* the history keeps its own copy; the server mirrors this for a remote site */
+    (state.data.history || []).forEach(function (h) { if (h.id === b.id) h.status = status; });
+  });
 }
 
 function setPublished(i, on) {
