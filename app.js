@@ -140,6 +140,18 @@ function formMinutes() {
   }, 0);
 }
 
+/* how long a booking takes, from its services' lengths as set now; a booking
+   whose services cannot be found keeps the length it was saved with, if any.
+   Same as bookingMinutes() in lib/time.js. */
+function bookingMinutes(b) {
+  var found = false, total = 0;
+  String(b.service || '').split(' \u00b7 ').forEach(function (n) {
+    var s = state.data.services.filter(function (x) { return x.name === n.trim(); })[0];
+    if (s) { found = true; total += durationMinutes(s.dur); }
+  });
+  return found ? total : (Number(b.minutes) || 0);
+}
+
 /* Would an appointment at `time` on `date`, for `minutes`, run into one
    already standing? A booking whose length is unknown holds its own time
    only, and a time that cannot be read clashes only when written the same way. */
@@ -169,7 +181,7 @@ function dropTakenTime() {
 function loadTaken() {
   if (!API.remote) {
     setTaken((state.data.bookings || []).filter(function (b) { return b.status !== 'cancelled'; })
-      .map(function (b) { return { date: b.dateISO, time: b.time, minutes: b.minutes || 0 }; }));
+      .map(function (b) { return { date: b.dateISO, time: b.time, minutes: bookingMinutes(b) }; }));
     return Promise.resolve();
   }
   return API.get('/api/bookings?taken=1')
