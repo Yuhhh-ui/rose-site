@@ -1657,6 +1657,14 @@ function allBookings() {
   return out;
 }
 
+/* A booking on its way out keeps its place in the history. The server does
+   the same for a remote site; this covers a local copy and the moment before
+   the inbox is next fetched. */
+function keepInHistory(b) {
+  var h = state.data.history = state.data.history || [];
+  if (!h.some(function (x) { return x.id === b.id; })) h.unshift(JSON.parse(JSON.stringify(b)));
+}
+
 /* when a request came in, as a short date */
 function whenRequested(at) {
   if (!at) return '';
@@ -2105,12 +2113,14 @@ var actions = {
   bCancel:   function (i) { setStatus(i, 'cancelled'); },
   bRemove:   function (i) {
     var b = state.data.bookings[Number(i)];
-    inbox('bookings', 'DELETE', { id: b.id }, function () { state.data.bookings.splice(Number(i), 1); });
+    inbox('bookings', 'DELETE', { id: b.id }, function () { keepInHistory(b); state.data.bookings.splice(Number(i), 1); });
   },
   clearCompleted: function () {
     inbox('bookings', 'DELETE', { clear: true }, function () {
       state.data.bookings = state.data.bookings.filter(function (b) {
-        return b.status !== 'completed' && b.status !== 'cancelled';
+        var gone = b.status === 'completed' || b.status === 'cancelled';
+        if (gone) keepInHistory(b);
+        return !gone;
       });
     });
   },

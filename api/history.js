@@ -5,12 +5,15 @@
 
 import { send, fail } from '../lib/http.js';
 import { loggedIn } from '../lib/auth.js';
-import { listItems } from '../lib/store.js';
+import { listItems, keepInHistory } from '../lib/store.js';
 
 export default async function handler(req, res) {
   try {
     if (!loggedIn(req)) return fail(res, 401, 'Please sign in.');
     if (req.method !== 'GET') return fail(res, 405, 'Method not allowed');
+    /* bookings from before the history existed are copied in the first time it is read */
+    var live = await listItems('bookings');
+    for (var i = 0; i < live.length; i++) await keepInHistory(live[i]);
     return send(res, 200, { items: await listItems('history') });
   } catch (e) {
     console.error(e);
