@@ -1,6 +1,10 @@
 /* Booking requests.
    POST   public  { name, contact, email, occasion, notes, service, date, time, place }
-                  name, contact, service, date and time required
+                  name, contact, service, date and time required; service may
+                  be several, joined with " · "; a time already taken on that
+                  date is refused
+   GET    public  ?taken=1 -> { taken: [{ date, time }] }   dates as YYYY-MM-DD,
+                  every booking that is not cancelled, nothing about who
    GET    studio  -> { items }
    PATCH  studio  { id, status }          pending | confirmed | completed | cancelled
    DELETE studio  { id }  or  { clear: true }   clear removes completed and cancelled
@@ -16,6 +20,13 @@ import { notify, bookingText } from '../lib/notify.js';
 
 const STATUSES = ['pending', 'confirmed', 'completed', 'cancelled'];
 
+/* The times no one else can book: every booking still standing, as date and
+   time only. A cancelled one frees its time again. */
+function takenTimes(all) {
+  return all.filter(function (x) { return x.status !== 'cancelled' && x.dateISO && x.time; })
+    .map(function (x) { return { date: x.dateISO, time: x.time }; });
+}
+
 export default async function handler(req, res) {
   try {
     var b = body(req);
@@ -29,7 +40,7 @@ export default async function handler(req, res) {
         email:    clean(b.email, 160),
         occasion: clean(b.occasion, 160),
         notes:    clean(b.notes, 2000),
-        service:  clean(b.service, 120),
+        service:  clean(b.service, 400),
         date:     clean(b.date, 60),
         dateISO:  /^\d{4}-\d{2}-\d{2}$/.test(String(b.dateISO || '')) ? String(b.dateISO) : '',
         time:     clean(b.time, 40),
@@ -38,10 +49,19 @@ export default async function handler(req, res) {
       if (!item.name || !item.contact || !item.service || !item.date || !item.time) {
         return fail(res, 400, 'Add a service, a date, a time, your name and a number to reach you on.');
       }
+      /* two people on the page at once: the second to send loses the time */
+      var clash = takenTimes(await listItems('bookings')).some(function (t) {
+        return t.date === item.dateISO && t.time === item.time;
+      });
+      if (item.dateISO && clash) return fail(res, 409, 'That time has just been taken on that date. Please pick another.');
       await putItem('bookings', item);
       await putItem('history', item);
       await notify('New booking request from ' + item.name, bookingText(item));
       return send(res, 200, { ok: true, id: item.id });
+    }
+
+    if (req.method === 'GET' && (req.query || {}).taken) {
+      return send(res, 200, { taken: takenTimes(await listItems('bookings')) });
     }
 
     if (!loggedIn(req)) return fail(res, 401, 'Please sign in.');

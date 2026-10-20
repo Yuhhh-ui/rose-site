@@ -49,7 +49,8 @@ var state = {
   readPolicies: false, // the policies have been shown on the way to the form this visit
   polAt: null,         // a policy picked from the index, while it is still on screen
   polAtAt: 0,          // when it was picked, to ride out the scroll to it
-  histOpen: false      // the "add a past booking" form is showing
+  histOpen: false,     // the "add a past booking" form is showing
+  taken: {}            // 'YYYY-MM-DD|time' for every time someone else already has
 };
 
 /* --- storage ------------------------------------------------------------ */
@@ -77,6 +78,9 @@ function applySaved(saved) {
   normaliseGallery();
   normalisePolicies();
   normaliseTimes();
+  /* the form used to hold one service as a string; it is now a list */
+  var f = state.data.form;
+  if (f && !Array.isArray(f.svcs)) f.svcs = f.svc ? [f.svc] : [];
 }
 
 function loadLocal() {
@@ -93,6 +97,30 @@ function restoreForms() {
   } catch (e) {}
   /* dates used to be stored as a bare day number; ignore anything that old */
   if (state.data.form && !isIso(state.data.form.date)) state.data.form.date = '';
+}
+
+/* --- times already taken ------------------------------------------------
+   A booking holds its time on its date from the moment it is sent, and a
+   cancelled one lets it go. The site asks the server which are taken when
+   the booking page opens; a local copy works it out from its own bookings. */
+function takenKey(date, time) { return date + '|' + time; }
+
+function isTaken(date, time) { return !!state.taken[takenKey(date, time)]; }
+
+function setTaken(list) {
+  state.taken = {};
+  (list || []).forEach(function (t) { if (t.date && t.time) state.taken[takenKey(t.date, t.time)] = true; });
+}
+
+function loadTaken() {
+  if (!API.remote) {
+    setTaken((state.data.bookings || []).filter(function (b) { return b.status !== 'cancelled'; })
+      .map(function (b) { return { date: b.dateISO, time: b.time }; }));
+    return Promise.resolve();
+  }
+  return API.get('/api/bookings?taken=1')
+    .then(function (r) { setTaken(r.taken); render(); })
+    .catch(function () { /* the page still works; the server has the last word when the booking is sent */ });
 }
 
 /* Photos used to be plain URL strings and are now { url, tag }.
@@ -419,6 +447,7 @@ function go(page, anchor) {
   state.page = page;
   state.flash = '';
   render();
+  if (page === 'booking') loadTaken();
   /* opening the panel should show what has come in since the page loaded */
   if (page === 'admin' && state.logged && API.remote) loadInbox(true);
   watchInbox();
@@ -970,7 +999,7 @@ function bookingPage() {
   var d = state.data;
 
   var picks = liveServices().map(function (x) {
-    var s = x.s, sel = d.form.svc === s.name;
+    var s = x.s, sel = d.form.svcs.indexOf(s.name) >= 0;
     return '<div class="pick" data-act="pick:' + x.i + '">' +
       '<div class="pick-top">' +
         '<span class="pick-name">' + esc(s.name) + '</span>' +
@@ -980,8 +1009,11 @@ function bookingPage() {
     '</div>';
   }).join('');
 
+  /* a time someone else has on the chosen date is shown but cannot be picked */
   var times = liveTimes();
   var slots = times.map(function (t) {
+    var gone = isIso(d.form.date) && isTaken(d.form.date, t);
+    if (gone) return '<div class="slot off"><span>' + esc(t) + '</span><span class="slot-note">TAKEN</span></div>';
     return '<div class="slot" data-act="slot:' + esc(t) + '">' +
       '<span>' + esc(t) + '</span>' +
       (d.form.time === t ? '<span class="tick">✓</span>' : '') +
@@ -996,7 +1028,8 @@ function bookingPage() {
     '</div>' +
 
     '<section class="step">' +
-      '<div class="step-head"><span class="step-num">STEP 01</span><h2 class="step-title">Which service?</h2></div>' +
+      '<div class="step-head"><span class="step-num">STEP 01</span><h2 class="step-title">Which services?</h2></div>' +
+      '<p class="step-hint">Pick as many as you like.</p>' +
       '<div class="pick-grid">' + picks + '</div>' +
     '</section>' +
 
@@ -1039,7 +1072,7 @@ function bookingPage() {
           'Once it is confirmed you will get a note back.</p>' +
       '</div>' +
       '<div class="summary">' +
-        '<div class="sum-row"><span>Service</span><span>' + esc(d.form.svc || '—') + '</span></div>' +
+        '<div class="sum-row"><span>' + (d.form.svcs.length > 1 ? 'Services' : 'Service') + '</span><span>' + esc(d.form.svcs.join(' · ') || '—') + '</span></div>' +
         '<div class="sum-row"><span>Date</span><span>' + esc(prettyDate(d.form.date) || '—') + '</span></div>' +
         '<div class="sum-row"><span>Time</span><span>' + esc(d.form.time || '—') + '</span></div>' +
         '<div class="sum-row"><span>Location</span><span>' + esc(d.form.place || '—') + '</span></div>' +
@@ -1050,6 +1083,8 @@ function bookingPage() {
           ? '<p class="err">Add a service, a date, a time, your name and a number to reach you on.</p>' : '') +
         (state.flash === 'booking-past'
           ? '<p class="err">That date has already passed. Please pick another.</p>' : '') +
+        (state.flash === 'booking-taken'
+          ? '<p class="err">That time has just been taken on that date. Please pick another.</p>' : '') +
         (flashText('send-error') ? '<p class="err">Could not send: ' + esc(flashText('send-error')) + '</p>' : '') +
         /* the policies were shown on the way in; this is the way back to them */
         (livePolicies().length
@@ -1975,7 +2010,7 @@ function inbox(kind, method, payload, apply) {
 /* A booking went through: clear the form completely and show the confirmation. */
 function finishBooking(item) {
   state.booked = item;
-  state.data.form = { name: '', contact: '', email: '', occasion: '', notes: '', svc: '', date: '', time: '', place: '' };
+  state.data.form = { name: '', contact: '', email: '', occasion: '', notes: '', svcs: [], date: '', time: '', place: '' };
   saveForms();
   state.flash = '';
   animateNext();
@@ -2032,9 +2067,11 @@ var actions = {
   },
 
   /* booking flow */
+  /* BOOK THIS on a service card: that service joins whatever is already picked */
   book: function (i) {
     state.booked = null;
-    setPath('form.svc', state.data.services[i].name);
+    var name = state.data.services[i].name, svcs = state.data.form.svcs;
+    if (svcs.indexOf(name) < 0) setPath('form.svcs', svcs.concat([name]));
     go('booking');
   },
 
@@ -2044,8 +2081,18 @@ var actions = {
     render();
     window.scrollTo(0, 0);
   },
-  pick:  function (i) { setPath('form.svc', state.data.services[i].name); render(); },
-  day:   function (iso) { setPath('form.date', iso); render(); },
+  /* a card ticks on and off, so a client can have more than one service */
+  pick:  function (i) {
+    var name = state.data.services[i].name, svcs = state.data.form.svcs;
+    setPath('form.svcs', svcs.indexOf(name) < 0 ? svcs.concat([name]) : svcs.filter(function (n) { return n !== name; }));
+    render();
+  },
+  /* a time already taken on the newly chosen date is let go of */
+  day:   function (iso) {
+    setPath('form.date', iso);
+    if (state.data.form.time && isTaken(iso, state.data.form.time)) setPath('form.time', '');
+    render();
+  },
   month: function (step) {
     state.calOffset = Math.min(Math.max((state.calOffset || 0) + Number(step), 0), MONTHS_AHEAD);
     render();
@@ -2055,12 +2102,13 @@ var actions = {
 
   sendBooking: function () {
     var f = state.data.form;
-    if (!f.name || !f.contact || !f.svc || !isIso(f.date) || !f.time) { flash('booking-error'); return; }
+    if (!f.name || !f.contact || !f.svcs.length || !isIso(f.date) || !f.time) { flash('booking-error'); return; }
     if (isoToDate(f.date) < todayStart()) { flash('booking-past'); return; }
+    if (isTaken(f.date, f.time)) { flash('booking-taken'); return; }
     var item = {
       id: 'b' + Date.now(), at: Date.now(),
       name: f.name, contact: f.contact, email: f.email,
-      occasion: f.occasion, notes: f.notes, service: f.svc,
+      occasion: f.occasion, notes: f.notes, service: f.svcs.join(' · '),
       date: prettyDate(f.date), dateISO: f.date, time: f.time,
       place: f.place || 'Studio', status: 'pending'
     };
@@ -2073,7 +2121,12 @@ var actions = {
     state.sending = true; state.flash = ''; render();
     API.post('/api/bookings', item)
       .then(function () { state.sending = false; finishBooking(item); })
-      .catch(function (e) { state.sending = false; flash('send-error:' + e.message); });
+      .catch(function (e) {
+        state.sending = false;
+        /* someone else took the time while the form was being filled in */
+        if (e.status === 409) { setPath('form.time', ''); loadTaken(); flash('booking-taken'); return; }
+        flash('send-error:' + e.message);
+      });
   },
 
   sendReview: function () {
