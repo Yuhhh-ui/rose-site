@@ -3,8 +3,11 @@
                   name, contact, service, date and time required; service may
                   be several, joined with " · "; a time already taken on that
                   date is refused
-   GET    public  ?taken=1 -> { taken: [{ date, time }] }   dates as YYYY-MM-DD,
-                  every booking that is not cancelled, nothing about who
+                  `minutes` is how long the services take altogether, so the
+                  booking holds every time it runs over, plus the breathing
+                  room set in the panel (`gap` in the content, 30 by default)
+   GET    public  ?taken=1 -> { taken: [{ date, time, minutes }] }   dates as
+                  YYYY-MM-DD, every booking that is not cancelled, nothing about who
    GET    studio  -> { items }
    PATCH  studio  { id, status }          pending | confirmed | completed | cancelled
    DELETE studio  { id }  or  { clear: true }   clear removes completed and cancelled
@@ -15,8 +18,9 @@
 
 import { send, fail, body, clean, id } from '../lib/http.js';
 import { loggedIn } from '../lib/auth.js';
-import { listItems, getItem, putItem, delItem, keepInHistory } from '../lib/store.js';
+import { listItems, getItem, putItem, delItem, keepInHistory, getContent } from '../lib/store.js';
 import { notify, bookingText } from '../lib/notify.js';
+import { timeToMinutes, overlaps, gapMinutes } from '../lib/time.js';
 
 const STATUSES = ['pending', 'confirmed', 'completed', 'cancelled'];
 
@@ -24,7 +28,18 @@ const STATUSES = ['pending', 'confirmed', 'completed', 'cancelled'];
    time only. A cancelled one frees its time again. */
 function takenTimes(all) {
   return all.filter(function (x) { return x.status !== 'cancelled' && x.dateISO && x.time; })
-    .map(function (x) { return { date: x.dateISO, time: x.time }; });
+    .map(function (x) { return { date: x.dateISO, time: x.time, minutes: x.minutes || 0 }; });
+}
+
+/* Would a booking at this date and time, for this long, run into one already
+   standing? Times that cannot be read clash only when written the same way. */
+function clashes(taken, item, gap) {
+  var start = timeToMinutes(item.time);
+  return taken.some(function (t) {
+    if (t.date !== item.dateISO) return false;
+    if (t.time === item.time) return true;
+    return overlaps(start, item.minutes, timeToMinutes(t.time), t.minutes, gap);
+  });
 }
 
 export default async function handler(req, res) {
@@ -44,16 +59,16 @@ export default async function handler(req, res) {
         date:     clean(b.date, 60),
         dateISO:  /^\d{4}-\d{2}-\d{2}$/.test(String(b.dateISO || '')) ? String(b.dateISO) : '',
         time:     clean(b.time, 40),
-        place:    clean(b.place, 60) || 'Studio'
+        place:    clean(b.place, 60) || 'Studio',
+        minutes:  Math.min(Math.max(Math.round(Number(b.minutes)) || 0, 0), 24 * 60)
       };
       if (!item.name || !item.contact || !item.service || !item.date || !item.time) {
         return fail(res, 400, 'Add a service, a date, a time, your name and a number to reach you on.');
       }
       /* two people on the page at once: the second to send loses the time */
-      var clash = takenTimes(await listItems('bookings')).some(function (t) {
-        return t.date === item.dateISO && t.time === item.time;
-      });
-      if (item.dateISO && clash) return fail(res, 409, 'That time has just been taken on that date. Please pick another.');
+      if (item.dateISO && clashes(takenTimes(await listItems('bookings')), item, gapMinutes(await getContent()))) {
+        return fail(res, 409, 'That time has just been taken on that date. Please pick another.');
+      }
       await putItem('bookings', item);
       await putItem('history', item);
       await notify('New booking request from ' + item.name, bookingText(item));
