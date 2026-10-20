@@ -88,5 +88,7 @@ const DEFAULT_CONTENT = {
   // in-progress form values, kept so a half-filled form survives a refresh
   form:  { name: '', contact: '', email: '', occasion: '', notes: '', svc: '', date: '', time: '', place: '' },
   rform: { name: '', service: '', text: '', img: '' },
-  cform: { name: '', phone: '', email: '', topic: '', message: '' }
+  cform: { name: '', phone: '', email: '', topic: '', message: '' },
+  // the panel's "add a past booking" form, under History
+  hform: { name: '', contact: '', email: '', service: '', date: '', time: '', place: 'Studio', status: 'completed', notes: '' }
 };
