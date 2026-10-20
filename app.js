@@ -201,6 +201,7 @@ function loadInbox(quiet) {
       state.data.reviews  = r[1].items;
       state.data.messages = r[2].items;
       state.data.history  = r[3].items;
+      state.data.histClearedAt = r[3].clearedAt || 0;
       state.inboxAt = Date.now();
       render();
     })
@@ -1652,8 +1653,10 @@ function allBookings() {
     seen[h.id] = 1;
     return live[h.id] ? Object.assign({}, h, { status: live[h.id].status }) : h;
   });
-  /* bookings from before the history existed are only in the live list */
-  (state.data.bookings || []).forEach(function (b) { if (!seen[b.id]) out.push(b); });
+  /* bookings from before the history existed are only in the live list; one
+     from before the history was last cleared stays out of it on purpose */
+  var cleared = state.data.histClearedAt || 0;
+  (state.data.bookings || []).forEach(function (b) { if (!seen[b.id] && (b.at || 0) > cleared) out.push(b); });
   out.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
   return out;
 }
@@ -1663,6 +1666,7 @@ function allBookings() {
    the inbox is next fetched. */
 function keepInHistory(b) {
   var h = state.data.history = state.data.history || [];
+  if ((b.at || 0) <= (state.data.histClearedAt || 0)) return;
   if (!h.some(function (x) { return x.id === b.id; })) h.unshift(JSON.parse(JSON.stringify(b)));
 }
 
@@ -1743,7 +1747,8 @@ function panelHistory() {
       '<div class="stat"><p>CANCELLED</p><span>' + count('cancelled') + '</span></div>' +
     '</div>' +
     (all.length
-      ? '<div class="stack">' + rows + '</div>'
+      ? '<div class="stack">' + rows + '</div>' +
+        '<span class="btn-wide" data-act="histClear">CLEAR HISTORY</span>'
       : empty('No history yet', 'Every booking request lands here as it comes in, and stays here for good.')) +
   '</div>';
 }
@@ -2165,6 +2170,14 @@ var actions = {
     API.post('/api/history', item)
       .then(function (r) { state.data.history.unshift(r.item || item); done(); })
       .catch(function (e) { flash('inbox-error:' + e.message); });
+  },
+  histClear: function () {
+    if (!window.confirm('Clear the whole history? Bookings still in the Bookings section are not touched, ' +
+      'but nothing cleared here can be brought back.')) return;
+    inbox('history', 'DELETE', { clear: true }, function () {
+      state.data.history = [];
+      state.data.histClearedAt = Date.now();
+    });
   },
   histRemove: function (id) {
     var h = (state.data.history || []).filter(function (x) { return x.id === id; })[0];
