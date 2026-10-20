@@ -90,6 +90,12 @@ Typing saves; leaving the field re-renders. File inputs carry
   write a `panelXxx()` function, add it to the lookup object in `panel()`.
 - **Change colours or type** — `:root` in `styles.css`.
 - **Change the starting copy** — `content.js`.
+- **Booking history** — every request is written to `history` as well as
+  `bookings` by `api/bookings.js`, and a status change is mirrored there, so
+  the panel's **History** section still shows a booking after it has been
+  cleared or cancelled. Nothing deletes from it except Settings → Clear
+  everything. **Clients** is built from the same list, so a client stays
+  listed after their bookings are cleared.
 - **Services and lash styles** are a plain list the panel adds to and deletes
   from, so nothing assumes there are four of them. Bookings record the service
   name, not its position, so deleting one leaves past bookings intact.
@@ -180,6 +186,7 @@ All JSON. "studio" means the session cookie from logging in is required.
 | `/api/bookings` | `POST` new request (name, contact, service, date and time required) · `GET` studio · `PATCH {id,status}` studio · `DELETE {id}` or `{clear:true}` studio |
 | `/api/reviews` | `GET` published (all, for studio) · `POST {name,text,img}` · `PATCH {id,published}` or `{id,featured:true}` studio · `DELETE {id}` studio |
 | `/api/messages` | `POST` (name, phone and message required) · `GET` studio · `DELETE {id}` studio |
+| `/api/history` | `GET` studio — every booking ever requested, newest first |
 | `/api/upload` | `POST {data}` studio → `{url}` |
 | `/api/reset` | `POST` studio — wipes everything |
 | `/api/notify-test` | `POST` studio — sends a test alert, reports per-channel results |
