@@ -63,7 +63,7 @@ var state = {
 
 var KEY = 'rose-studio-v1';
 var FORMS_KEY = 'rose-forms-v1';
-var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'gallery', 'hours', 'times', 'gap', 'brand', 'contact', 'polTail'];
+var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'gallery', 'hours', 'times', 'brand', 'contact', 'polTail'];
 var FORM_KEYS = ['form', 'rform', 'cform', 'hform'];
 
 function blank() { return JSON.parse(JSON.stringify(DEFAULT_CONTENT)); }
@@ -78,8 +78,6 @@ function applySaved(saved) {
   normaliseGallery();
   normalisePolicies();
   normaliseTimes();
-  /* content saved before there was breathing room gets the half hour */
-  if (!(Number(state.data.gap) >= 0) || state.data.gap === '') state.data.gap = blank().gap;
   /* the form used to hold one service as a string; it is now a list */
   var f = state.data.form;
   if (f && !Array.isArray(f.svcs)) f.svcs = f.svc ? [f.svc] : [];
@@ -142,26 +140,16 @@ function formMinutes() {
   }, 0);
 }
 
-/* the breathing room kept clear after every appointment, from the panel */
-function gapMinutes() {
-  var g = Number(state.data.gap);
-  return g >= 0 ? g : 30;
-}
-
 /* Would an appointment at `time` on `date`, for `minutes`, run into one
-   already standing? Every appointment keeps the breathing room clear after
-   it in case it runs over, and the new one must also leave that much room
-   before the one it is in front of. A booking whose length is unknown holds
-   its own time only, and a time that cannot be read clashes only when
-   written the same way. Same rule as overlaps() in lib/time.js. */
+   already standing? A booking whose length is unknown holds its own time
+   only, and a time that cannot be read clashes only when written the same way. */
 function isTaken(date, time, minutes) {
-  var gap = gapMinutes(), start = timeToMinutes(time);
-  var end = start == null ? null : start + Math.max(minutes || 0, 1) + gap;
+  var start = timeToMinutes(time), end = start == null ? null : start + Math.max(minutes || 0, 1);
   return (state.taken[date] || []).some(function (t) {
     if (t.time === time) return true;
     var s = timeToMinutes(t.time);
     if (start == null || s == null) return false;
-    return start < s + Math.max(t.minutes || 0, 1) + gap && s - gap < end;
+    return start < s + Math.max(t.minutes || 0, 1) && s < end;
   });
 }
 
@@ -1505,13 +1493,6 @@ function panelAvailability() {
         : '<strong>None are set, so nobody can pick a time</strong> \u2014 add at least one.') + '</p>' +
     (times.length ? '<div class="stack">' + slots + '</div>' : '') +
     '<span class="btn-wide" style="margin-top:' + (times.length ? '12' : '0') + 'px" data-act="addTime">+ ADD A TIME</span>' +
-
-    '<p class="eyebrow" style="margin:36px 0 8px">BREATHING ROOM</p>' +
-    '<p class="empty-text" style="margin-bottom:18px;color:var(--mute-2)">' +
-      'Minutes kept clear after every appointment in case it runs over. An appointment holds its own ' +
-      'length plus this, and a new one has to leave this much room before the next appointment too.</p>' +
-    '<div class="field-row"><span>Minutes</span>' +
-      '<input type="number" min="0" step="5" value="' + esc(state.data.gap) + '" data-k="gap" placeholder="30"></div>' +
   '</div>';
 }
 
