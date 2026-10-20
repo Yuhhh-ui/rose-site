@@ -6,11 +6,12 @@
    DELETE studio  { id }  or  { clear: true }   clear removes completed and cancelled
 
    Every request is also written to the history, which keeps a copy for good:
-   a status change is mirrored there, a delete is not.                        */
+   a status change is mirrored there, and a delete first makes sure the copy
+   exists, for bookings that came in before the history did.                 */
 
 import { send, fail, body, clean, id } from '../lib/http.js';
 import { loggedIn } from '../lib/auth.js';
-import { listItems, getItem, putItem, delItem } from '../lib/store.js';
+import { listItems, getItem, putItem, delItem, keepInHistory } from '../lib/store.js';
 import { notify, bookingText } from '../lib/notify.js';
 
 const STATUSES = ['pending', 'confirmed', 'completed', 'cancelled'];
@@ -64,10 +65,14 @@ export default async function handler(req, res) {
       if (b.clear) {
         var all = await listItems('bookings');
         for (var i = 0; i < all.length; i++) {
-          if (all[i].status === 'completed' || all[i].status === 'cancelled') await delItem('bookings', all[i].id);
+          if (all[i].status === 'completed' || all[i].status === 'cancelled') {
+            await keepInHistory(all[i]);
+            await delItem('bookings', all[i].id);
+          }
         }
         return send(res, 200, { ok: true });
       }
+      await keepInHistory(await getItem('bookings', String(b.id || '')));
       await delItem('bookings', String(b.id || ''));
       return send(res, 200, { ok: true });
     }

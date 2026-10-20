@@ -93,8 +93,9 @@ Typing saves; leaving the field re-renders. File inputs carry
 - **Booking history** — every request is written to `history` as well as
   `bookings` by `api/bookings.js`, and a status change is mirrored there, so
   the panel's **History** section still shows a booking after it has been
-  cleared or cancelled. Nothing deletes from it except Settings → Clear
-  everything. **Clients** is built from the same list, so a client stays
+  cleared or cancelled. Bookings from before the history existed are copied
+  in when the history is read and again before one is deleted, so none is
+  lost. Nothing deletes from it except Settings → Clear everything. **Clients** is built from the same list, so a client stays
   listed after their bookings are cleared.
 - **Services and lash styles** are a plain list the panel adds to and deletes
   from, so nothing assumes there are four of them. Bookings record the service
