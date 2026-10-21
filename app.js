@@ -1088,6 +1088,10 @@ function bookingPage() {
   }).join('');
   if (!times.length) slots = '<p class="place-note">No times are open yet \u2014 please get in touch.</p>';
 
+  /* once anything is chosen, a way to start the choices again; the details typed in are kept */
+  var chosen = d.form.svcs.length || d.form.date || d.form.time || d.form.place;
+  var clear = chosen ? '<span class="link-gold step-clear" data-act="clearChoices">CLEAR MY CHOICES</span>' : '';
+
   return '<div class="page">' +
     '<div class="page-head">' +
       '<p class="eyebrow">APPOINTMENTS</p>' +
@@ -1095,7 +1099,7 @@ function bookingPage() {
     '</div>' +
 
     '<section class="step">' +
-      '<div class="step-head"><span class="step-num">STEP 01</span><h2 class="step-title">Which services?</h2></div>' +
+      '<div class="step-head"><span class="step-num">STEP 01</span><h2 class="step-title">Which services?</h2>' + clear + '</div>' +
       '<p class="step-hint">Pick as many as you like.</p>' +
       '<div class="pick-grid">' + picks + '</div>' +
     '</section>' +
@@ -1153,6 +1157,7 @@ function bookingPage() {
         (state.flash === 'booking-taken'
           ? '<p class="err">That time has just been taken on that date. Please pick another.</p>' : '') +
         (flashText('send-error') ? '<p class="err">Could not send: ' + esc(flashText('send-error')) + '</p>' : '') +
+        (chosen ? '<p class="confirm-note"><span class="link-gold" data-act="clearChoices">Clear my choices</span> and start again.</p>' : '') +
         /* the policies were shown on the way in; this is the way back to them */
         (livePolicies().length
           ? '<p class="confirm-note">Booking a date confirms you have read the ' +
@@ -2148,6 +2153,14 @@ var actions = {
     animateNext();
     render();
     window.scrollTo(0, 0);
+  },
+  /* the choices go, the details typed in stay */
+  clearChoices: function () {
+    var f = state.data.form;
+    f.svcs = []; f.date = ''; f.time = ''; f.place = '';
+    saveForms();
+    state.flash = '';
+    render();
   },
   /* a card ticks on and off, so a client can have more than one service */
   pick:  function (i) {
