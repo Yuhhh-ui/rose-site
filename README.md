@@ -104,8 +104,8 @@ Typing saves; leaving the field re-renders. File inputs carry
   listed after their bookings are cleared.
 - **Announcements** are two objects in the content, edited under
   **Announcements** in the panel. `notice` is a pop-up over the site when it
-  opens, with a heading, a message, an optional button to a page, and an
-  `on` switch; a visitor sees it once, the browser remembering which one it
+  opens, with an optional picture, a heading, a message, an optional button
+  to a page, and an `on` switch; a visitor sees it once, the browser remembering which one it
   dismissed by its `stamp` and its words, and switching it on sets a fresh
   stamp so everyone sees it once more. `bar` is a strip above the menu on
   every page for as long as it is on. Neither shows inside the panel.
