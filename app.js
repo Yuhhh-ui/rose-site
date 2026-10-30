@@ -19,6 +19,7 @@ var SECTIONS = {
   bookings:     'Bookings',
   availability: 'Availability',
   services:     'Services & prices',
+  jewellery:    'Jewellery',
   policies:     'Policies',
   portfolio:    'Portfolio',
   pages:        'Website content',
@@ -63,7 +64,7 @@ var state = {
 
 var KEY = 'rose-studio-v1';
 var FORMS_KEY = 'rose-forms-v1';
-var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'policies', 'gallery', 'hours', 'times', 'brand', 'contact', 'polTail'];
+var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'jewellery', 'policies', 'gallery', 'hours', 'times', 'brand', 'contact', 'polTail'];
 var FORM_KEYS = ['form', 'rform', 'cform', 'hform'];
 
 function blank() { return JSON.parse(JSON.stringify(DEFAULT_CONTENT)); }
@@ -78,6 +79,7 @@ function applySaved(saved) {
   normaliseGallery();
   normalisePolicies();
   normaliseTimes();
+  normaliseJewellery();
   /* the form used to hold one service as a string; it is now a list */
   var f = state.data.form;
   if (f && !Array.isArray(f.svcs)) f.svcs = f.svc ? [f.svc] : [];
@@ -238,6 +240,26 @@ function normaliseTimes() {
   var t = state.data.times;
   if (!Array.isArray(t)) { state.data.times = blank().times; return; }
   state.data.times = t.map(function (x) { return x == null ? '' : String(x); });
+}
+
+/* Content saved before there was jewellery has none; anything saved is kept
+   whole, with every field present so the panel and the page can rely on it. */
+function normaliseJewellery() {
+  var j = state.data.jewellery;
+  if (!Array.isArray(j)) { state.data.jewellery = []; return; }
+  state.data.jewellery = j.map(function (x) {
+    x = x || {};
+    return { name: x.name || '', price: x.price || '', desc: x.desc || '', img: x.img || '',
+      soldOut: !!x.soldOut, live: x.live !== false };
+  });
+}
+
+/* The pieces on the website: the ones not hidden, with their place in the list
+   kept so the panel's buttons can find them. */
+function liveJewellery() {
+  return (state.data.jewellery || [])
+    .map(function (j, i) { return { j: j, i: i }; })
+    .filter(function (x) { return x.j.live && (x.j.name || x.j.img); });
 }
 
 /* The ones a client can pick: blank rows in the panel are left out. */
@@ -561,6 +583,7 @@ function nav() {
       link('home', 'HOME') +
       link('services', 'SERVICES') +
       link('gallery', 'GALLERY') +
+      (liveJewellery().length || state.logged ? link('jewellery', 'JEWELLERY') : '') +
       link('artist', 'THE ARTIST') +
       link('reviews', 'REVIEWS') +
       link('contact', 'CONTACT') +
@@ -622,6 +645,8 @@ function homePage() {
 
   var repeat = '';
   for (var i = 0; i < 4; i++) repeat += '<span>Book with us</span>';
+
+  var jewels = liveJewellery().slice(0, 4).map(function (x) { return jewelCard(x.j, true); }).join('');
 
   return '<div class="page home">' +
 
@@ -711,6 +736,21 @@ function homePage() {
         '<span class="btn-ghost" data-act="go:gallery">SEE THE FULL GALLERY</span>' +
       '</div>' +
     '</section>' +
+
+    /* jewellery, once there is some: the first four pieces and the way to the rest */
+    (jewels.length
+      ? '<section class="home-jewellery sand">' +
+          '<div class="band-head">' +
+            '<h2 class="band-title">Jewellery</h2>' +
+            '<span class="band-sub">PIECES FROM THE STUDIO</span>' +
+            '<div class="band-rule"></div>' +
+          '</div>' +
+          '<div class="jw-grid home-jw-grid">' + jewels + '</div>' +
+          '<div class="gallery-cta">' +
+            '<span class="btn-dark" data-act="go:jewellery">SEE ALL THE JEWELLERY</span>' +
+          '</div>' +
+        '</section>'
+      : '') +
 
   '</div>';
 }
@@ -872,6 +912,67 @@ function galleryPage() {
     (tags.length ? '<div class="gal-filters">' + chips + '</div>' : '') +
     '<div class="gal-grid">' + tiles + '</div>' +
     lightbox +
+  '</div>';
+}
+
+/* A wa.me link that opens the client's own WhatsApp with the piece they want
+   written in, the same way a booking can be sent on. Empty until a WhatsApp
+   number is set in Settings. */
+function jewelOrderLink(j) {
+  var num = String(state.data.brand.whatsapp || '').replace(/[^\d]/g, '');
+  if (!num) return '';
+  var text = 'Hi! I would like to order the ' + j.name + (j.price ? ' (' + money(j.price) + ')' : '') + ' from your jewellery.';
+  return 'https://wa.me/' + num + '?text=' + encodeURIComponent(text);
+}
+
+/* One piece: on the page in full, or on the homepage without the description */
+function jewelCard(j, brief) {
+  var order = jewelOrderLink(j);
+  return '<article class="jw-card' + (j.soldOut ? ' sold' : '') + '">' +
+    '<div class="jw-img frame">' + photo(j.img, 'PHOTO') +
+      (j.soldOut ? '<span class="jw-sold">SOLD OUT</span>' : '') + '</div>' +
+    '<div class="jw-body">' +
+      '<span class="jw-name">' + esc(j.name || 'Untitled piece') + '</span>' +
+      '<span class="jw-price">' + esc(j.price ? money(j.price) : 'Price on request') + '</span>' +
+      (!brief && j.desc ? '<p class="jw-desc">' + esc(j.desc) + '</p>' : '') +
+      (brief ? '' :
+        j.soldOut ? '<span class="jw-note">Sold out \u2014 ask about the next one.</span>' :
+        order ? '<a class="btn-wa jw-order" href="' + esc(order) + '" target="_blank" rel="noopener">MESSAGE TO ORDER</a>' :
+        '<span class="link-gold jw-ask" data-act="go:contact">ASK ABOUT THIS PIECE \u2192</span>') +
+    '</div>' +
+  '</article>';
+}
+
+function jewelleryPage() {
+  var live = liveJewellery();
+  var cards = live.map(function (x) { return jewelCard(x.j, false); }).join('');
+  var forSale = live.filter(function (x) { return !x.j.soldOut; }).length;
+
+  return '<div class="page jewellery">' +
+    '<section class="gal-head">' +
+      '<div class="gal-head-copy">' +
+        '<span class="script">From the studio</span>' +
+        '<h1 class="gal-title">Jewellery</h1>' +
+      '</div>' +
+      (live.length ? '<span class="gal-count">' + live.length + (live.length === 1 ? ' PIECE' : ' PIECES') +
+        (forSale < live.length ? ' \u00b7 ' + forSale + ' AVAILABLE' : '') + '</span>' : '') +
+    '</section>' +
+    (live.length
+      ? '<div class="jw-grid jw-page-grid">' + cards + '</div>'
+      : '<section class="gal-empty">' +
+          '<p class="empty-hint">' + (state.logged
+            ? 'Nothing here yet \u2014 add your first piece under Jewellery in the studio panel.'
+            : 'Nothing here yet. New pieces are on their way.') + '</p>' +
+        '</section>') +
+    (live.length
+      ? '<section class="pol-tail">' +
+          '<div class="pol-tail-copy">' +
+            '<span class="pol-tail-label">HOW IT WORKS</span>' +
+            '<h3 class="pol-tail-title">Message to order, and collect at the studio or at your appointment.</h3>' +
+          '</div>' +
+          '<span class="btn-line pol-tail-btn" data-act="go:contact">ASK A QUESTION</span>' +
+        '</section>'
+      : '') +
   '</div>';
 }
 
@@ -1292,6 +1393,7 @@ function footer() {
         '<span class="foot-label">PAGES</span>' +
         '<span class="foot-link" data-act="go:services">Services</span>' +
         '<span class="foot-link" data-act="go:gallery">Gallery</span>' +
+        (liveJewellery().length ? '<span class="foot-link" data-act="go:jewellery">Jewellery</span>' : '') +
         '<span class="foot-link" data-act="go:artist">The Artist</span>' +
         '<span class="foot-link" data-act="go:reviews">Reviews</span>' +
         '<span class="foot-link" data-act="go:booking">Booking</span>' +
@@ -1357,6 +1459,7 @@ function panel() {
     bookings:     panelBookings,
     availability: panelAvailability,
     services:     panelServices,
+    jewellery:    panelJewellery,
     policies:     panelPolicies,
     portfolio:    panelPortfolio,
     pages:        panelPages,
@@ -1564,6 +1667,55 @@ function panelServices() {
     '<p class="eyebrow" style="margin:40px 0 16px;font-size:9px;letter-spacing:.26em">LASHES</p>' +
     (state.data.lashes.length ? '<div class="lash-admin-grid">' + lashes + '</div>' : '') +
     '<span class="btn-wide" style="margin-top:16px" data-act="addLash">+ ADD A LASH STYLE</span>' +
+  '</div>';
+}
+
+/* The pieces for sale: one box each, like a service. */
+function panelJewellery() {
+  var all = state.data.jewellery || [], shown = liveJewellery().length;
+
+  var boxes = all.map(function (j, i) {
+    return '<div class="a-svc">' +
+      '<div class="a-col">' +
+        '<div class="a-img-lg frame">' + photo(j.img, 'NO PHOTO') + '</div>' +
+        '<div class="upload-row">' +
+          '<label class="upload">' + (j.img ? 'CHANGE PHOTO' : 'UPLOAD PHOTO') +
+            '<input type="file" accept="image/*" data-upload="jewellery.' + i + '.img"></label>' +
+          (j.img ? '<span class="remove-link" data-act="clearImg:jewellery.' + i + '.img">REMOVE</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="a-fields">' +
+        '<input type="text" value="' + esc(j.name) + '" data-k="jewellery.' + i + '.name" placeholder="Name of the piece">' +
+        '<input type="text" value="' + esc(j.price) + '" data-k="jewellery.' + i + '.price" placeholder="Price, e.g. 85">' +
+        '<textarea rows="3" data-k="jewellery.' + i + '.desc" ' +
+          'placeholder="A line or two about it \u2014 materials, size, what it goes with">' + esc(j.desc) + '</textarea>' +
+        '<div class="a-toggle-row">' +
+          '<span class="a-toggle-label">' + (j.soldOut ? 'Sold out' : 'Available') + '</span>' +
+          '<span class="a-toggle" data-act="toggle:jewellery.' + i + '.soldOut">' + (j.soldOut ? 'MARK AVAILABLE' : 'MARK SOLD OUT') + '</span>' +
+        '</div>' +
+        '<div class="a-toggle-row">' +
+          '<span class="a-toggle-label">' + (j.live ? 'On the site' : 'Hidden') + '</span>' +
+          '<span class="a-toggle" data-act="toggle:jewellery.' + i + '.live">' + (j.live ? 'HIDE' : 'SHOW') + '</span>' +
+        '</div>' +
+        '<span class="remove-link" data-act="delJewel:' + i + '">DELETE THIS PIECE</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  return '<div class="main-body">' +
+    '<p class="empty-text" style="margin:0 0 6px;color:var(--mute-2)">' +
+      'The pieces you sell. Each one gets a photo, a name, a price and a few words. ' +
+      'A client taps <strong>Message to order</strong> and it opens WhatsApp to the number in Settings.</p>' +
+    '<p class="conn-line" style="margin:0 0 22px">' +
+      (shown
+        ? '<span class="conn-dot on"></span>' + shown + ' of ' + all.length + ' on the site. ' +
+          '<span class="link-gold" data-act="go:jewellery">See the page \u2192</span>'
+        : '<span class="conn-dot"></span>Nothing on the site yet \u2014 the Jewellery page and its place in the menu appear with the first piece.') +
+    '</p>' +
+    (all.length
+      ? '<div class="stack-wide">' + boxes + '</div>'
+      : empty('No jewellery yet', 'Add your first piece below.')) +
+    '<span class="btn-wide" data-act="addJewel">+ ADD A PIECE</span>' +
   '</div>';
 }
 
@@ -1990,6 +2142,7 @@ function render() {
     if (state.page === 'home')     html += homePage();
     if (state.page === 'services') html += servicesPage();
     if (state.page === 'gallery')  html += galleryPage();
+    if (state.page === 'jewellery') html += jewelleryPage();
     if (state.page === 'artist')   html += artistPage();
     if (state.page === 'reviews')  html += reviewsPage();
     if (state.page === 'booking')  html += bookingPage();
@@ -2247,6 +2400,18 @@ var actions = {
   },
   addPolicy: function () {
     state.data.policies.push({ title: '', text: '', img: '' });
+    save(); render();
+  },
+
+  /* panel — jewellery */
+  addJewel: function () {
+    state.data.jewellery.push({ name: '', price: '', desc: '', img: '', soldOut: false, live: true });
+    save(); render();
+  },
+  delJewel: function (i) {
+    var j = state.data.jewellery[Number(i)];
+    if (!window.confirm('Delete "' + (j.name || 'this piece') + '"?')) return;
+    state.data.jewellery.splice(Number(i), 1);
     save(); render();
   },
 
