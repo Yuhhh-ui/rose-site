@@ -156,6 +156,31 @@ textarea { resize: vertical; line-height: 1.7; }
 .page-head h1 { margin: 0; font-family: var(--serif); font-size: 56px; font-weight: 300; color: var(--cream); }
 .page-head .lede { margin: 16px auto 0; max-width: 520px; font-size: 13.5px; font-weight: 200; line-height: 1.8; color: var(--mute-2); }
 
+/* --- announcements ------------------------------------------------------ */
+/* a strip above the menu, in the accent colour so it reads as news */
+.bar {
+  display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap;
+  padding: 11px var(--gutter); background: var(--gold); color: var(--ink);
+  font-size: 11px; font-weight: 400; letter-spacing: .08em; text-align: center;
+}
+.bar-link { cursor: pointer; font-size: 9.5px; font-weight: 500; letter-spacing: .22em; white-space: nowrap; border-bottom: 1px solid rgba(11, 10, 9, .4); }
+.bar-link:hover { border-color: var(--ink); }
+
+/* the pop-up: a veil over the site, and a card in the middle of the screen */
+.notice-wrap { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: var(--gutter); }
+.notice-veil { position: absolute; inset: 0; background: rgba(11, 10, 9, .82); backdrop-filter: blur(6px); animation: fadeIn .25s ease both; }
+.notice {
+  position: relative; width: min(520px, 100%); max-height: calc(100vh - 2 * var(--gutter)); overflow: auto;
+  display: flex; flex-direction: column; gap: 16px; padding: clamp(28px, 4vw, 44px);
+  background: var(--panel); border: 1px solid var(--gold-line);
+  animation: pageIn .4s cubic-bezier(.22, .61, .36, 1) both;
+}
+.notice-close { position: absolute; top: 16px; right: 18px; cursor: pointer; font-size: 13px; color: var(--dim); transition: color .28s ease; }
+.notice-close:hover { color: var(--cream); }
+.notice-title { margin: 0; font-family: var(--serif); font-size: clamp(26px, 3.2vw, 36px); font-weight: 300; line-height: 1.15; color: var(--cream); }
+.notice-text { margin: 0; font-size: 13.5px; font-weight: 200; line-height: 1.85; color: var(--mute); white-space: pre-wrap; }
+.notice-btn { align-self: flex-start; margin-top: 6px; }
+
 /* --- nav ---------------------------------------------------------------- */
 .nav {
   position: sticky; top: 0; z-index: 40;

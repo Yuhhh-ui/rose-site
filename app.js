@@ -23,6 +23,7 @@ var SECTIONS = {
   policies:     'Policies',
   portfolio:    'Portfolio',
   pages:        'Website content',
+  announce:     'Announcements',
   reviews:      'Reviews',
   clients:      'Clients',
   history:      'History',
@@ -64,7 +65,7 @@ var state = {
 
 var KEY = 'rose-studio-v1';
 var FORMS_KEY = 'rose-forms-v1';
-var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'jewellery', 'policies', 'gallery', 'hours', 'times', 'brand', 'contact', 'polTail'];
+var CONTENT_KEYS = ['home', 'artist', 'services', 'lashes', 'jewellery', 'policies', 'gallery', 'hours', 'times', 'brand', 'contact', 'polTail', 'notice', 'bar'];
 var FORM_KEYS = ['form', 'rform', 'cform', 'hform'];
 
 function blank() { return JSON.parse(JSON.stringify(DEFAULT_CONTENT)); }
@@ -73,7 +74,7 @@ function blank() { return JSON.parse(JSON.stringify(DEFAULT_CONTENT)); }
 function applySaved(saved) {
   if (!saved) return;
   state.data = Object.assign(state.data, saved);
-  ['home', 'artist', 'brand', 'contact', 'polTail'].forEach(function (k) {
+  ['home', 'artist', 'brand', 'contact', 'polTail', 'notice', 'bar'].forEach(function (k) {
     if (saved[k]) state.data[k] = Object.assign(blank()[k], saved[k]);
   });
   normaliseGallery();
@@ -568,6 +569,60 @@ function featuredReview() {
 /* =========================================================================
    PUBLIC SITE
    ========================================================================= */
+
+/* --- announcements -------------------------------------------------------
+   The pop-up is seen once: the browser remembers which one was dismissed,
+   by its stamp and its words, so a rewrite or switching it off and on again
+   shows it afresh. The bar simply stays while it is on. Neither appears
+   inside the panel. */
+var SEEN_KEY = 'rose-notice-seen-v1';
+
+/* the pages a button can go to, as the panel offers them */
+var NOTICE_PAGES = [
+  ['', 'No button'], ['booking', 'Booking page'], ['services', 'Services'], ['jewellery', 'Jewellery'],
+  ['gallery', 'Gallery'], ['reviews', 'Reviews'], ['artist', 'The artist'], ['contact', 'Contact page'], ['policies', 'Policies']
+];
+
+function noticeKey() {
+  var n = state.data.notice || {};
+  return (n.stamp || 0) + '|' + (n.title || '') + '|' + (n.text || '');
+}
+
+function noticeLive() {
+  var n = state.data.notice || {};
+  return !!n.on && !!(n.title || n.text);
+}
+
+function noticeSeen() {
+  try { return localStorage.getItem(SEEN_KEY) === noticeKey(); } catch (e) { return false; }
+}
+
+function noticeShowing() {
+  return state.page !== 'admin' && noticeLive() && !state.noticeClosed && !noticeSeen();
+}
+
+function noticeHtml() {
+  var n = state.data.notice;
+  return '<div class="notice-wrap" role="dialog" aria-modal="true">' +
+    '<div class="notice-veil" data-act="noticeClose"></div>' +
+    '<div class="notice">' +
+      '<span class="notice-close" data-act="noticeClose" aria-label="Close">\u2715</span>' +
+      '<span class="eyebrow">A NOTE FROM THE STUDIO</span>' +
+      (n.title ? '<h2 class="notice-title">' + esc(n.title) + '</h2>' : '') +
+      (n.text ? '<p class="notice-text">' + esc(n.text) + '</p>' : '') +
+      (n.btn && n.to ? '<span class="btn notice-btn" data-act="noticeGo:' + esc(n.to) + '">' + esc(n.btn) + '</span>' : '') +
+    '</div>' +
+  '</div>';
+}
+
+function barHtml() {
+  var b = state.data.bar || {};
+  if (!b.on || !b.text) return '';
+  return '<div class="bar">' +
+    '<span class="bar-text">' + esc(b.text) + '</span>' +
+    (b.btn && b.to ? '<span class="bar-link" data-act="go:' + esc(b.to) + '">' + esc(b.btn) + ' \u2192</span>' : '') +
+  '</div>';
+}
 
 function nav() {
   function link(page, label) {
@@ -1463,6 +1518,7 @@ function panel() {
     policies:     panelPolicies,
     portfolio:    panelPortfolio,
     pages:        panelPages,
+    announce:     panelAnnounce,
     reviews:      panelReviews,
     clients:      panelClients,
     history:      panelHistory,
@@ -1872,6 +1928,58 @@ function panelPolicies() {
   '</div>';
 }
 
+/* One pop-up and one bar, each with its own switch. */
+function panelAnnounce() {
+  var n = state.data.notice, b = state.data.bar;
+  var pages = function (cur, key) {
+    return '<select data-k="' + key + '">' + NOTICE_PAGES.map(function (p) {
+      return '<option value="' + esc(p[0]) + '"' + (cur === p[0] ? ' selected' : '') + '>' + esc(p[1]) + '</option>';
+    }).join('') + '</select>';
+  };
+  var state_ = function (on, ready, what) {
+    return '<p class="conn-line" style="margin:0 0 18px">' +
+      (on && ready ? '<span class="conn-dot on"></span>On \u2014 ' + what
+       : on ? '<span class="conn-dot"></span>Switched on, but there is nothing written yet, so nothing shows.'
+       : '<span class="conn-dot"></span>Off.') + '</p>';
+  };
+
+  return '<div class="main-body mid">' +
+    '<p class="eyebrow">POP-UP WHEN THE SITE OPENS</p>' +
+    '<p class="empty-text" style="margin:8px 0 14px;color:var(--mute-2)">' +
+      'For something urgent. A visitor sees it once, over the site, the moment it opens. ' +
+      'Once they close it, it stays away on that device until you change the words or switch it off and on again.</p>' +
+    state_(n.on, !!(n.title || n.text), 'every visitor sees it once.') +
+    '<div class="field"><span class="field-label">Heading</span>' +
+      '<input type="text" value="' + esc(n.title) + '" data-k="notice.title" placeholder="e.g. Closed this weekend"></div>' +
+    '<div class="field"><span class="field-label">Message</span>' +
+      '<textarea rows="4" data-k="notice.text" placeholder="What they need to know">' + esc(n.text) + '</textarea></div>' +
+    '<div class="a-pair">' +
+      '<div class="field" style="flex:1"><span class="field-label">Button says (optional)</span>' +
+        '<input type="text" value="' + esc(n.btn) + '" data-k="notice.btn" placeholder="e.g. Book now"></div>' +
+      '<div class="field" style="flex:1"><span class="field-label">Button goes to</span>' + pages(n.to, 'notice.to') + '</div>' +
+    '</div>' +
+    '<div class="row" style="margin:18px 0 0;align-items:center">' +
+      '<span class="btn-sm" data-act="noticeToggle">' + (n.on ? 'SWITCH OFF' : 'SWITCH ON') + '</span>' +
+      (n.on ? '<span class="link-gold" data-act="go:home">See it on the site \u2192</span>' : '') +
+    '</div>' +
+
+    '<p class="eyebrow" style="margin-top:44px">BAR AT THE TOP OF EVERY PAGE</p>' +
+    '<p class="empty-text" style="margin:8px 0 14px;color:var(--mute-2)">' +
+      'For news that can wait. A thin strip above the menu, on every page, for as long as it is on.</p>' +
+    state_(b.on, !!b.text, 'it is at the top of every page.') +
+    '<div class="field"><span class="field-label">What it says</span>' +
+      '<input type="text" value="' + esc(b.text) + '" data-k="bar.text" placeholder="e.g. New jewellery in the studio this week"></div>' +
+    '<div class="a-pair">' +
+      '<div class="field" style="flex:1"><span class="field-label">Link says (optional)</span>' +
+        '<input type="text" value="' + esc(b.btn) + '" data-k="bar.btn" placeholder="e.g. Have a look"></div>' +
+      '<div class="field" style="flex:1"><span class="field-label">Link goes to</span>' + pages(b.to, 'bar.to') + '</div>' +
+    '</div>' +
+    '<div class="row" style="margin:18px 0 0;align-items:center">' +
+      '<span class="btn-sm" data-act="barToggle">' + (b.on ? 'SWITCH OFF' : 'SWITCH ON') + '</span>' +
+    '</div>' +
+  '</div>';
+}
+
 function panelReviews() {
   var rs = state.data.reviews;
 
@@ -2138,6 +2246,7 @@ function render() {
   if (inAdmin) {
     html = state.logged ? panel() : loginPage();
   } else {
+    html += barHtml();
     html += nav();
     if (state.page === 'home')     html += homePage();
     if (state.page === 'services') html += servicesPage();
@@ -2149,6 +2258,7 @@ function render() {
     if (state.page === 'policies') html += policiesPage();
     if (state.page === 'contact')  html += contactPage();
     html += footer();
+    if (noticeShowing()) html += noticeHtml();
   }
 
   /* remember where the caret was, so a re-render mid-typing does not throw the visitor out of the field */
@@ -2403,6 +2513,23 @@ var actions = {
     save(); render();
   },
 
+  /* the pop-up: closing it is remembered on this device */
+  noticeClose: function () {
+    try { localStorage.setItem(SEEN_KEY, noticeKey()); } catch (e) {}
+    state.noticeClosed = true;
+    render();
+  },
+  noticeGo: function (page) { actions.noticeClose(); go(page); },
+
+  /* panel — announcements: switching the pop-up on stamps it, so everyone sees it once more */
+  noticeToggle: function () {
+    var n = state.data.notice;
+    n.on = !n.on;
+    if (n.on) n.stamp = Date.now();
+    save(); render();
+  },
+  barToggle: function () { state.data.bar.on = !state.data.bar.on; save(); render(); },
+
   /* panel — jewellery */
   addJewel: function () {
     state.data.jewellery.push({ name: '', price: '', desc: '', img: '', soldOut: false, live: true });
@@ -2599,6 +2726,7 @@ app.addEventListener('keydown', function (e) {
 
 /* The lightbox answers to Escape and the arrow keys. */
 document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && noticeShowing()) { actions.noticeClose(); return; }
   if (!state.gal || !state.gal.open) return;
   if (e.key === 'Escape')     { actions.galClose(); }
   if (e.key === 'ArrowRight') { actions.galStep(1); }

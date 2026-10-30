@@ -84,6 +84,15 @@ const DEFAULT_CONTENT = {
   // the band at the foot of the policies page: a small label and the line under it
   polTail: { label: 'STILL UNSURE?', title: 'Message me and I will talk it through.' },
 
+  /* Announcements, both off until the panel turns them on.
+     notice  a pop-up over the site when it opens, seen once per visitor;
+             `stamp` changes whenever it is switched on, so switching it off
+             and on again shows it to everyone once more
+     bar     a thin strip above the menu, always there while it is on
+     `to` is the page a button goes to, or '' for no button                   */
+  notice: { on: false, title: '', text: '', btn: '', to: 'booking', stamp: 0 },
+  bar:    { on: false, text: '', btn: '', to: 'booking' },
+
   // filled in as the site is used
   bookings: [],
   reviews: [],
