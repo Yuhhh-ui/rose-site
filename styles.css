@@ -625,6 +625,34 @@ textarea { resize: vertical; line-height: 1.7; }
 .lb-nav:hover { border-color: var(--gold); color: var(--gold); }
 .lb-tag { font-size: 9px; font-weight: 400; letter-spacing: .24em; color: var(--gold); }
 
+/* --- jewellery ---------------------------------------------------------- */
+.jw-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 2vw, 28px); }
+.jw-page-grid { padding: 0 var(--gutter) clamp(44px, 5.5vw, 76px); }
+.jw-card { display: flex; flex-direction: column; gap: 14px; }
+.jw-img { aspect-ratio: 1; overflow: hidden; }
+.jw-sold {
+  position: absolute; top: 12px; left: 12px; z-index: 1;
+  padding: 7px 12px; background: var(--ink); color: var(--cream);
+  font-size: 8.5px; font-weight: 400; letter-spacing: .22em;
+}
+.jw-card.sold .jw-img .fill { opacity: .55; }
+.jw-body { display: flex; flex-direction: column; gap: 6px; }
+.jw-name { font-family: var(--serif); font-size: clamp(20px, 2.2vw, 26px); line-height: 1.1; }
+.jw-price { font-size: 9.5px; font-weight: 300; letter-spacing: .20em; color: var(--gold); text-transform: uppercase; }
+.jw-desc { margin: 6px 0 0; font-size: 12.5px; font-weight: 200; line-height: 1.75; color: var(--mute-2); white-space: pre-wrap; }
+.jw-order { align-self: flex-start; }
+.jw-ask { margin-top: 14px; transition: color .28s ease; }
+.jw-ask:hover { color: var(--cream); }
+.jw-note { margin-top: 14px; font-size: 11px; font-weight: 300; color: var(--dim); }
+
+/* on the homepage: a sand band, four across */
+.home-jewellery { background: var(--sand); padding: clamp(56px, 8vw, 100px) var(--gutter); }
+.home-jw-grid { max-width: 1100px; margin: clamp(36px, 5vw, 58px) auto 0; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.home-jewellery .jw-img { background: rgba(46, 36, 28, .16); }
+.home-jewellery .jw-name { color: var(--sand-ink); }
+.home-jewellery .jw-price { color: var(--sand-dim); }
+.home-jewellery .ph-label { color: rgba(46, 36, 28, .5); }
+
 /* --- reviews ------------------------------------------------------------ */
 .rv-head {
   display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;
@@ -1044,6 +1072,7 @@ textarea { resize: vertical; line-height: 1.7; }
   .nav-link { font-size: 10px; letter-spacing: .17em; }
   .svc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 16px; }
   .gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .jw-grid, .home-jw-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 14px; }
   .footer-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; }
   .looks-grid { grid-template-columns: 1fr; gap: 28px; }

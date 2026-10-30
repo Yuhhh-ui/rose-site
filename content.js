@@ -48,6 +48,11 @@ const DEFAULT_CONTENT = {
     { name: 'Dramatic volume',      price: '', img: '' }
   ],
 
+  /* The pieces for sale. Each is { name, price, desc, img, soldOut, live }: the
+     panel adds and deletes them, so the number is not fixed, a hidden one stays
+     off the site, and the page only appears in the menu once one is on it. */
+  jewellery: [],
+
   /* Each one is { title, text, img }: a heading, what it says, and a picture
      of it if the policy is already written out as an image. The panel adds and
      deletes them, so the number is not fixed, and one with neither text nor a

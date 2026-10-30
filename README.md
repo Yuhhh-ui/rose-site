@@ -102,6 +102,14 @@ Typing saves; leaving the field re-renders. File inputs carry
   history** wipes the lot and records when, and a booking from before that
   moment is never copied back in, so a clear lasts. **Clients** is built from the same list, so a client stays
   listed after their bookings are cleared.
+- **Jewellery** is `jewelleryPage()`, a list of `{ name, price, desc, img,
+  soldOut, live }` the panel's **Jewellery** section adds to and deletes
+  from. A hidden piece stays off the site, a sold-out one is shown but
+  cannot be ordered, and the page, its menu link and the sand band on the
+  homepage (the first four pieces) all appear with the first piece that is
+  shown. There are no payments: **Message to order** opens the client's own
+  WhatsApp to the number in Settings with the piece written in, and without
+  a number the card points to the contact page instead.
 - **Services and lash styles** are a plain list the panel adds to and deletes
   from, so nothing assumes there are four of them. Bookings record the service
   name, not its position, so deleting one leaves past bookings intact.
