@@ -90,7 +90,7 @@ const DEFAULT_CONTENT = {
              and on again shows it to everyone once more
      bar     a thin strip above the menu, always there while it is on
      `to` is the page a button goes to, or '' for no button                   */
-  notice: { on: false, title: '', text: '', btn: '', to: 'booking', stamp: 0 },
+  notice: { on: false, title: '', text: '', img: '', btn: '', to: 'booking', stamp: 0 },
   bar:    { on: false, text: '', btn: '', to: 'booking' },
 
   // filled in as the site is used

@@ -585,12 +585,12 @@ var NOTICE_PAGES = [
 
 function noticeKey() {
   var n = state.data.notice || {};
-  return (n.stamp || 0) + '|' + (n.title || '') + '|' + (n.text || '');
+  return (n.stamp || 0) + '|' + (n.title || '') + '|' + (n.text || '') + '|' + (n.img || '');
 }
 
 function noticeLive() {
   var n = state.data.notice || {};
-  return !!n.on && !!(n.title || n.text);
+  return !!n.on && !!(n.title || n.text || n.img);
 }
 
 function noticeSeen() {
@@ -607,6 +607,7 @@ function noticeHtml() {
     '<div class="notice-veil" data-act="noticeClose"></div>' +
     '<div class="notice">' +
       '<span class="notice-close" data-act="noticeClose" aria-label="Close">\u2715</span>' +
+      (n.img ? '<div class="notice-img frame auto">' + photo(n.img, '', true) + '</div>' : '') +
       '<span class="eyebrow">A NOTE FROM THE STUDIO</span>' +
       (n.title ? '<h2 class="notice-title">' + esc(n.title) + '</h2>' : '') +
       (n.text ? '<p class="notice-text">' + esc(n.text) + '</p>' : '') +
@@ -1948,7 +1949,14 @@ function panelAnnounce() {
     '<p class="empty-text" style="margin:8px 0 14px;color:var(--mute-2)">' +
       'For something urgent. A visitor sees it once, over the site, the moment it opens. ' +
       'Once they close it, it stays away on that device until you change the words or switch it off and on again.</p>' +
-    state_(n.on, !!(n.title || n.text), 'every visitor sees it once.') +
+    state_(n.on, !!(n.title || n.text || n.img), 'every visitor sees it once.') +
+    '<div class="field"><span class="field-label">Picture (optional, shown above the heading)</span>' +
+      (n.img ? '<div class="a-img-md frame auto">' + photo(n.img, '', true) + '</div>' : '') +
+      '<div class="upload-row">' +
+        '<label class="upload">' + (n.img ? 'CHANGE PICTURE' : 'ADD A PICTURE') +
+          '<input type="file" accept="image/*" data-upload="notice.img"></label>' +
+        (n.img ? '<span class="remove-link" data-act="clearImg:notice.img">REMOVE PICTURE</span>' : '') +
+      '</div></div>' +
     '<div class="field"><span class="field-label">Heading</span>' +
       '<input type="text" value="' + esc(n.title) + '" data-k="notice.title" placeholder="e.g. Closed this weekend"></div>' +
     '<div class="field"><span class="field-label">Message</span>' +
